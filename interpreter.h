@@ -14,6 +14,7 @@ private:
     QString statement;
     QChar look;
     int cursor;
+    bool outputResult, forbidOutput;
 
     void getChar();
     bool match(QChar x);

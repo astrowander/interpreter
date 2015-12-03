@@ -1,6 +1,6 @@
 #include "myvariant.h"
 
-MyVariant::MyVariant(DataType m_dataType, real_type *m_data, int m_size) : dataType(m_dataType), size(m_size)
+MyVariant::MyVariant(DataType m_dataType, real_type *m_data, int m_size, const QString& m_name) : dataType(m_dataType), size(m_size), name(m_name)
 {
     if (m_data==nullptr || size<0) {
         data = nullptr;
@@ -29,6 +29,7 @@ MyVariant::MyVariant(const MyVariant &other)
 {
     dataType= other.dataType;
     size = other.size;
+    name=other.name;
     switch (other.dataType) {
     case NUMBER:
         data = new  real_type;
@@ -39,7 +40,7 @@ MyVariant::MyVariant(const MyVariant &other)
         std::copy(other.data, other.data+other.size, data);
         break;
     }
-    std::cout << "copy construction\n";
+   // std::cout << "copy construction\n";
 }
 
 MyVariant &MyVariant::operator=(const MyVariant &other)
@@ -58,7 +59,7 @@ MyVariant &MyVariant::operator=(const MyVariant &other)
         std::copy(other.data, other.data+other.size, data);
         break;
     }
-    std::cout << "assignment operator\n";
+   // std::cout << "assignment operator\n";
 }
 
 MyVariant::~MyVariant() {

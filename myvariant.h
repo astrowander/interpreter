@@ -2,6 +2,7 @@
 #define MYVARIANT_H
 #include <iostream>;
 #include <valarray>;
+#include <QString>
 
 
 typedef long double real_type;
@@ -13,9 +14,10 @@ class MyVariant
 private:
     DataType dataType;
     real_type* data;
+    QString name;
     int size;
 public:
-    MyVariant(DataType m_dataType=VOID, real_type* m_data=nullptr, int m_size=0);
+    MyVariant(DataType m_dataType=VOID, real_type* m_data=nullptr, int m_size=0, const QString& m_name="");
     MyVariant (MyVariant const& other);
 
     MyVariant& operator=(const MyVariant& other);
@@ -99,6 +101,11 @@ public:
         if (v1.dataType==NUMBER && v2.dataType==NUMBER) {
             return MyVariant(NUMBER, new real_type(pow(v1.toRealType(),  v2.toRealType())));
         }
+    }
+
+    QString getName()
+    {
+        return name;
     }
 };
 

@@ -7,6 +7,7 @@
 Interpreter::Interpreter()
 {
     activeBlock = &mainBlock;
+    forbidOutput = false;
 }
 
 void Interpreter::reportError(const QString &ss)
@@ -40,8 +41,11 @@ void Interpreter::run()
         statement = inStream.readLine();
         if (statement=="") continue;
         if (statement=="exit") break;
-        parseString();
-        std::cout << currentStatement->eval().toRealType() << std::endl;
+        if (!parseString()) continue;
+        MyVariant result(currentStatement->eval());
+        if(!forbidOutput && outputResult)
+            //activeBlock->setVariable("result", result);
+            std::cout << result.toRealType() << std::endl;
     }
 }
 
@@ -98,7 +102,6 @@ QString Interpreter::getNum(bool *ok)
     while ((look.isDigit() || look=='.')&& look!='\0') {
         value+=QString(look);
         getChar();
-
     }
     value.toDouble(ok);
     skipSpaces();
@@ -111,9 +114,6 @@ bool Interpreter::add()
 
     currentStatement->createNodeAbove(new AddOp);
     currentStatement->goUp();
-    //syntaxTree->writeLexem("+");
-    //syntaxTree->createRightChild();
-    //syntaxTree->goRight();
     if (!term()) return false;
     currentStatement->goUp();
     return true;
@@ -124,9 +124,6 @@ bool Interpreter::substract()
     match('-');
     currentStatement->createNodeAbove(new SubstractOp);
     currentStatement->goUp();
-    //syntaxTree->writeLexem("-");
-    //syntaxTree->createRightChild();
-    //syntaxTree->goRight();
     if (!term()) return false;
     currentStatement->goUp();
     return true;
@@ -135,7 +132,8 @@ bool Interpreter::substract()
 bool Interpreter::multiply()
 {
     if (!match('*')) return false;
-
+    currentStatement->createNodeAbove(new MultiplyOp);
+    currentStatement->goUp();
     if (!factor()) return false;
     if (!doHighPriorityOperations()) return false;
     return true;
@@ -144,15 +142,33 @@ bool Interpreter::multiply()
 bool Interpreter::divide()
 {
     if (!match('/')) return false;
-
+    currentStatement->createNodeAbove(new DivideOp);
+    currentStatement->goUp();
     if (!factor()) return false;
     if (!doHighPriorityOperations()) return false;
     return true;
 }
 
+bool Interpreter::power()
+{
+    match('^');
+    currentStatement->createNodeAbove(new PowerOp);
+    currentStatement->goUp();
+    if (!factor()) return false;
+    currentStatement->goUp();
+    return true;
+}
+
 bool Interpreter::ident()
 {
-    return false;
+    QString name = getWord();
+    if (!activeBlock->isVariableDeclared(name))
+    {
+        activeBlock->addVariable(name);
+    }
+
+    currentStatement->createRightChild(new Variable(activeBlock->getVariableByValue(name)));
+    return true;
 }
 
 bool Interpreter::factor()
@@ -178,83 +194,38 @@ bool Interpreter::factor()
     return true;
 }
 
-
-/*bool Interpreter::parseExpression()
-{
-    if (lookIsAddop()) {
-        syntaxTree->writeLexem("0");
-    }
-    else {
-        if (!term()) return false;
-    }
-
-    while (look!='\0' && look!=')' && look!=',') {
-        syntaxTree->createNodeAbove();
-        syntaxTree->goUp();
-
-        if (look == '+') {
-            if (!add()) return false;
-        }
-        else if (look =='-') {
-            if (!substract()) return false;
-        }
-        else {
-            reportExpected("Addop");
-            return false;
-        }
-    }
-    return true;
-}*/
-
 bool Interpreter::doHighPriorityOperations()
 {
     if (look=='=') {
         match('=');
-        //syntaxTree->createNodeAbove();
-        //syntaxTree->goUp();
-        //syntaxTree->writeLexem("=");
         currentStatement->createNodeAbove(new AssignOp);
         currentStatement->goUp();
-        //syntaxTree->createRightChild();
-        //syntaxTree->goRight();
         if (!assign()) return false;
-        //syntaxTree->goUp();
         return true;
     }
 
     if (look=='^') {
-        //syntaxTree->createNodeAbove();
-        //syntaxTree->goUp();
         if (!power()) return false;
         return true;
     }
     return true;
 }
 
-bool Interpreter::power()
-{
-    match('^');
 
-    if (!factor()) return false;
-    //syntaxTree->goUp();
-    return true;
-}
 
 bool Interpreter::term()
 {
     if (!factor()) return false;
     if (!doHighPriorityOperations()) return false;
     while (look =='*' or look == '/') {
-       // syntaxTree->createNodeAbove();
-       // syntaxTree->goUp();
 
         if (look == '*') {
             if (!multiply()) return false;
-            //syntaxTree->goUp();
+            currentStatement->goUp();
         }
         else if (look == '/') {
             if (!divide()) return false;
-           // syntaxTree->goUp();
+            currentStatement->goUp();
         }
         else {
             reportExpected("Mulop");
@@ -273,7 +244,7 @@ bool Interpreter::assign()
         if (!term()) return false;
     }
 
-     while (look!='\0' && look!=')' && look!=',')
+     while (look!='\0' && look!=')' && look!=',' && look != ';')
      {
          if (look == '+') {
              if (!add()) return false;
@@ -286,6 +257,7 @@ bool Interpreter::assign()
              return false;
          }
      }
+    return true;
 }
 
 bool Interpreter::parseString()
@@ -295,7 +267,9 @@ bool Interpreter::parseString()
     skipSpaces();
 
     currentStatement = new Statement();
-
+    outputResult = true;
     //assignment
-    return assign();
+    bool success = assign();
+    if (look==';') outputResult=false;
+    return success;
 }

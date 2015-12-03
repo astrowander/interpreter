@@ -52,21 +52,16 @@ public:
     }
     bool assign(const MyVariant &rvalue) {
         value = rvalue;
+        std::cout << value.getName().toStdString() << " = " << rvalue.toRealType() << std::endl;
         return true;
     }
 };
 
 class Op : public NonTerminalExpr
 {
-protected:
-   // virtual MyVariant operate() = 0;
 public:
     bool assign(const MyVariant& rvalue) {
         return false;
-    }
-
-    MyVariant eval() {
-        //return operate();
     }
 };
 
@@ -110,7 +105,7 @@ class AssignOp : public Op
 {
     MyVariant eval() {
         MyVariant result = right->eval();
-        left->assign(result);
+        left->assign(result);        
         return result;
     }
 };
