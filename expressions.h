@@ -9,7 +9,10 @@ public:
     AbstractExpr* parent;
     AbstractExpr* left;
     AbstractExpr* right;
-    AbstractExpr(AbstractExpr* m_parent = nullptr) {}
+    AbstractExpr()
+    {
+        parent = left = right = nullptr;
+    }
     virtual ~AbstractExpr() {}
     virtual MyVariant eval() = 0;
     virtual bool assign(const MyVariant& rvalue) = 0;
@@ -40,19 +43,39 @@ public:
     }
 };
 
+class ArrayElement: public TerminalExpr
+{
+private:
+    real_type* realPtr;
+
+public:
+    ArrayElement(real_type* m_ptr) : realPtr(m_ptr) {}
+
+    bool assign(const MyVariant &rvalue) {
+        *realPtr = rvalue.toRealType();
+    }
+
+    MyVariant eval()
+    {
+        return MyVariant(NUMBER,realPtr);
+    }
+
+};
+
 class Variable: public TerminalExpr
 {
 private:
     MyVariant& value;
 public:
-    Variable(MyVariant& m_value) : value(m_value) {}
+    Variable(MyVariant& m_value) : value(m_value) {}    
+
     MyVariant eval()
     {
         return value;
     }
     bool assign(const MyVariant &rvalue) {
         value = rvalue;
-        std::cout << value.getName().toStdString() << " = " << rvalue.toRealType() << std::endl;
+        //std::cout << value.print().toStdString();
         return true;
     }
 };

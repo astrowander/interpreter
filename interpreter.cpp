@@ -38,22 +38,33 @@ void Interpreter::run()
     forever
     {
         std::cout << ">>> ";
-        statement = inStream.readLine();
-        if (statement=="") continue;
-        if (statement=="exit") break;
-        if (!parseString()) continue;
-        MyVariant result(currentStatement->eval());
-        if(!forbidOutput && outputResult)
-            //activeBlock->setVariable("result", result);
-            std::cout << result.toRealType() << std::endl;
+        currentString = inStream.readLine();
+        if (currentString=="") continue;
+        if (currentString=="exit") break;
+        //if (!parseString()) continue;
+        QList<QString> list = preprocess();
+        foreach (QString ss , list) {
+            currentString = ss;
+            currentStatement = new Statement();
+            if (!parseString()) break;
+            activeBlock->addStatement(currentStatement);
+            MyVariant result(currentStatement->eval());
+            if(!forbidOutput && outputResult)
+                //activeBlock->setVariable("result", result);
+                std::cout << result.print().toStdString() << std::endl;
+
+            delete currentStatement;
+        }
+
+
     }
 }
 
 void Interpreter::getChar()
 {
     ++cursor;
-    if (cursor < statement.size()) {
-        look = statement[cursor];
+    if (cursor < currentString.size()) {
+        look = currentString[cursor];
         return;
     }
     look = '\0';
@@ -95,17 +106,29 @@ QString Interpreter::getWord()
     return token;
 }
 
-QString Interpreter::getNum(bool *ok)
+
+
+real_type Interpreter::getReal(bool *ok)
 {
     QString value = "";
-    if (!look.isDigit()) reportExpected("Integer");
+    if (!look.isDigit()) reportExpected("Real");
     while ((look.isDigit() || look=='.')&& look!='\0') {
         value+=QString(look);
         getChar();
     }
-    value.toDouble(ok);
-    skipSpaces();
-    return value;
+    //skipSpaces();
+    return value.toDouble(ok);
+}
+
+int Interpreter::getInt(bool* ok)
+{
+    QString value = "";
+    if (!look.isDigit()) reportExpected("Integer");
+    while (look.isDigit()&& look!='\0') {
+        value+=QString(look);
+        getChar();
+    }
+    return value.toInt(ok);
 }
 
 bool Interpreter::add()
@@ -164,10 +187,42 @@ bool Interpreter::ident()
     QString name = getWord();
     if (!activeBlock->isVariableDeclared(name))
     {
-        activeBlock->addVariable(name);
+        if (look=='[') {
+
+            match('[');
+
+            bool ok;
+            int size = getInt(&ok);
+
+            if (!ok || !match(']')) return false;
+
+            activeBlock->addVariable(name,ARRAY,size,new real_type[size]);
+        }
+        else {
+            activeBlock->addVariable(name);
+        }
+
+        currentStatement->createRightChild(new Variable(activeBlock->getVariableByValue(name)));
+        return true;
     }
 
-    currentStatement->createRightChild(new Variable(activeBlock->getVariableByValue(name)));
+    if (look!='[') {
+        currentStatement->createRightChild(new Variable(activeBlock->getVariableByValue(name)));
+        return true;
+    }
+
+    match('[');
+
+    bool ok;
+    int n = getInt(&ok);
+    skipSpaces();
+    if (!ok)
+    {
+        reportError("Invalid index");
+        return false;
+    }
+    currentStatement->createRightChild(new ArrayElement(activeBlock->getVariableByValue(name).atPtr(n,&ok)));//Variable(MyVariant(NUMBER,activeBlock->getVariableByValue(name).atPtr(n,&ok))));
+    match(']');
     return true;
 }
 
@@ -184,13 +239,39 @@ bool Interpreter::factor()
         if (!ident()) return false;
         return true;
     }
+
+  /*  if (look == '{') {
+        match('{');
+        QVector<real_type> vector;
+
+        while (look!='}') {
+
+            bool ok;
+            vector.append(getNum(&ok).toDouble());
+            if (!ok) return false;
+
+            if (look!='}' and look!=',') {
+                reportExpected("',' or '}'");
+                return false;
+            }
+            if (look==',') match(',');
+        }
+        match('}');
+        currentStatement->createRightChild(new Literal(MyVariant(ARRAY, vector.data(), vector.size())));
+        return true;
+    }*/
+
     bool ok;
-    real_type v = getNum(&ok).toDouble();
+    real_type* v = new real_type(getReal(&ok));
+    skipSpaces();
     if (!ok) {
         reportError("Invalid number");
+        delete v;
         return false;
     }
-    currentStatement->createRightChild(new Literal(MyVariant(NUMBER,new real_type(v))));
+
+    currentStatement->createRightChild(new Literal(MyVariant(NUMBER, v)));
+    delete v;
     return true;
 }
 
@@ -257,7 +338,51 @@ bool Interpreter::assign()
              return false;
          }
      }
-    return true;
+     return true;
+}
+
+QList<QString> Interpreter::preprocess()
+{
+    QList<QString> list;
+    int ntemp = 0;
+
+    cursor = -1;
+    getChar();
+    while (look!='\0')
+    {
+       if (look=='{')
+       {
+           int start, stop;
+           start = cursor;
+
+           QString varName = "temp" + QString::number(ntemp);
+           int size = 0;
+
+           match('{');
+           while (look!='}') {
+               ++size;
+               QString ss = varName + "[" + QString::number(size-1) + "]=";
+               while (look!=',' && look!='}') {
+                   ss+=QString(look);
+                   getChar();
+               }
+               ss+=";";
+               list.append(ss);
+               if (look==',') match(',');
+           }
+           stop = cursor;
+           match('}');
+           int len = stop-start+1;
+           currentString.replace(start, len, varName);
+           cursor-= len - varName.length();
+           list.prepend(varName + "[" + QString::number(size) + "];");
+           ntemp++;
+       }
+       getChar();
+    }
+
+    list.append(currentString);
+    return list;
 }
 
 bool Interpreter::parseString()
@@ -266,7 +391,7 @@ bool Interpreter::parseString()
     getChar();
     skipSpaces();
 
-    currentStatement = new Statement();
+
     outputResult = true;
     //assignment
     bool success = assign();

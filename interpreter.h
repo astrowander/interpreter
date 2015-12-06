@@ -11,7 +11,7 @@ private:
     Block* activeBlock;
     Statement* currentStatement;
 
-    QString statement;
+    QString currentString;
     QChar look;
     int cursor;
     bool outputResult, forbidOutput;
@@ -27,7 +27,7 @@ private:
     void reportExpected(const QString &ss);
 
     QString getWord();
-    QString getNum(bool *ok);
+    real_type getReal(bool *ok);
 
 
     bool add();
@@ -41,10 +41,13 @@ private:
     bool ident();
     bool doHighPriorityOperations();
     bool term();
+    int getInt(bool *ok);
 public:
     Interpreter();
 
     bool assign();
+
+    QList<QString> preprocess();
 
     bool parseString();
 

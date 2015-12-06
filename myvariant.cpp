@@ -11,18 +11,23 @@ MyVariant::MyVariant(DataType m_dataType, real_type *m_data, int m_size, const Q
     switch (dataType) {
     case NUMBER:
         data = new real_type(*m_data);
-        delete m_data;
+        //delete m_data;
         break;
     case ARRAY:
         data = new real_type[size];
         std::copy(m_data, m_data+m_size, data);
-        if (m_data!=nullptr) delete[] m_data;
+        //if (m_data!=nullptr) delete[] m_data;
         break;
     case TYPEERROR:
         data = nullptr;
         break;
     }
     //std::cout << "Constructor of variable is called" << std::endl;
+}
+
+MyVariant::MyVariant(Statement *m_statement)
+{
+
 }
 
 MyVariant::MyVariant(const MyVariant &other)

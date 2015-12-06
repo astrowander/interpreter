@@ -35,7 +35,15 @@ public:
 
     void deleteSubTree(AbstractExpr* node)
     {
-        AbstractExpr* p = node->parent;
+        AbstractExpr* p = node->parent;       
+
+        if (node->left != nullptr) {
+            deleteSubTree(node->left);
+        }
+        if (node->right != nullptr) {
+            deleteSubTree(node->right);
+        }
+
         if (p != nullptr) {
             if (p->left == node) {
                 p->left = nullptr;
@@ -45,12 +53,6 @@ public:
             }
         }
 
-        if (node->left != nullptr) {
-            deleteSubTree(node->left);
-        }
-        if (node->right != nullptr) {
-            deleteSubTree(node->right);
-        }
         delete node;
     }
 

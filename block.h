@@ -27,7 +27,7 @@ public:
     {
         Statement* statement = new Statement;
         *statement=*m_statement;
-        delete m_statement;
+
         statements.append(statement);
     }
 
@@ -41,9 +41,9 @@ public:
        return variablesMap[ss];
     }
 
-    void addVariable(const QString& ss)
+    void addVariable(const QString& ss, DataType dataType = NUMBER, int m_size = 0, real_type* data = new real_type(0))
     {
-        variablesMap.insert(ss, MyVariant(NUMBER,new real_type(0),0,ss));
+        variablesMap.insert(ss, MyVariant(dataType, data, m_size, ss));
     }
 
     void setVariable(const QString& name, const MyVariant& result) {
