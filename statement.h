@@ -2,6 +2,10 @@
 #define STATEMENT_H
 #include "expressions.h"
 
+//enum Direction  {LEFT, RIGHT};
+
+
+
 class Statement
 {
 private:
@@ -16,17 +20,69 @@ public:
 
     ~Statement()
     {
-        deleteSubTree(root);
+        if (root != nullptr)
+            deleteSubTree(root);
     }
 
-    void printSubTree(AbstractExpr* node)
+    Statement(Statement const& other)
+    {
+        std::cout<< "Statement copy constructor" << std::endl;
+    }
+
+    Statement& operator=(const Statement& other)
+    {
+        //std::cout<< "Statement assignment" << std::endl;
+        root = other.getRoot()->clone();
+        QStack<int> path;
+        other.getPath(other.getCurrentNode(),path);
+        currentNode = getNodeByPath(path);
+    }
+
+    void getPath(AbstractExpr* node, QStack<int> &path) const
+    {
+        if (node->parent==nullptr) return;
+        if (node->parent->left == node) path.push(0);
+        if (node->parent->right == node) path.push(1);
+
+        for (int i=0; i<node->parent->arguments.size(); ++i)
+        {
+            if (node->parent->arguments[i]==node) path.push(i+2);
+        }
+
+        getPath(node->parent, path);
+    }
+
+    AbstractExpr* getNodeByPath(QStack<int>& path) const
+    {
+        AbstractExpr* ptr = root;
+        while (!path.isEmpty())
+        {
+            int direction = path.pop();
+
+            switch (direction)
+            {
+            case 0:
+                ptr = ptr->left;
+                break;
+            case 1:
+                ptr=ptr->right;
+                break;
+            default:
+                ptr=ptr->arguments[direction-2];
+            }
+        }
+        return ptr;
+    }
+
+
+    void printSubTree(AbstractExpr* node) const
     {
         if (node->left!=nullptr) printSubTree(node->left);
         //std::cout << node->lexem.toStdString() << " ";
         if (node->right!=nullptr) printSubTree(node->right);
     }
 
-    void printTree()
+    void printTree() const
     {
         std::cout << "Syntax tree: ";
         printSubTree(root);
@@ -54,10 +110,23 @@ public:
         }
 
         delete node;
+        node=nullptr;
+    }
+
+    void deleteTree()
+    {
+        deleteSubTree(root);
+        root = nullptr;
+        currentNode = nullptr;
     }
 
     void createNodeAbove(AbstractExpr* newNode) {
         int mode;
+
+        if (currentNode==nullptr) {
+            createRightChild(newNode);
+            return;
+        }
 
         if (currentNode->parent==nullptr) {
             mode=0;
@@ -109,8 +178,8 @@ public:
        }
        newNode->parent = currentNode;
        currentNode->right = newNode;
-       goRight();
-    }
+       goRight();      
+    }    
 
     void goLeft()
     {
@@ -127,12 +196,17 @@ public:
         currentNode = currentNode->parent;
     }
 
-    AbstractExpr* getRoot()
+    AbstractExpr* getRoot() const
     {
         return root;
     }
 
-    MyVariant eval() {
+    AbstractExpr* getCurrentNode() const
+    {
+        return currentNode;
+    }
+
+    MyVariant eval() const {
         return root->eval();
     }
 };

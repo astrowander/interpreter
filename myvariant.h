@@ -1,27 +1,22 @@
 #ifndef MYVARIANT_H
 #define MYVARIANT_H
-#include <iostream>;
-#include <valarray>;
-#include <QString>
+#include "definitions.h"
+
+enum DataType {VOID, NUMBER, TYPEERROR};
+//enum DataRange {SINGLE, ARRAY};
 
 
-typedef long double real_type;
 
-enum DataType {VOID, NUMBER, ARRAY, TYPEERROR};
-
-class Statement;
-
-class MyVariant
+class MyVariant : public QObject
 {
 private:
     DataType dataType;
-    real_type* data;
-    Statement* statement;
+    real_type* data;    
     QString name;
-    int size;
+    int size;   
+
 public:
     MyVariant(DataType m_dataType=VOID, real_type* m_data=nullptr, int m_size=0, const QString& m_name="");
-    MyVariant(Statement* m_statement);
     MyVariant (MyVariant const& other);
 
     MyVariant& operator=(const MyVariant& other);
@@ -34,7 +29,7 @@ public:
 
     std::valarray<real_type> toValarray() const;
 
-    DataType getDataType();
+    DataType getDataType() const;
 
     friend MyVariant operator+(const MyVariant& v1, const MyVariant& v2)
     {
@@ -112,14 +107,14 @@ public:
         return MyVariant(TYPEERROR);
     }
 
-    QString getName()
+    QString getName() const
     {
         return name;
     }
 
-    QString print() const
+    void print() const
     {
-        QString result = name + " = ";
+        QString result = "\n" + name + " = ";
 
         switch (dataType)
         {
@@ -139,13 +134,13 @@ public:
             result += "Type mismatch error";
             break;
         default:
-            result += "NULL";
+            return;
         }
-        result += "\n";
-        return result;
+        result += "\n\n";
+        std::cout << result.toStdString();
     }
 
-    real_type at(int n, bool* ok = nullptr)
+    real_type at(int n, bool* ok = nullptr) const
     {
         if (dataType!=ARRAY || n>=size || n<0) {
             *ok=false;
@@ -161,6 +156,11 @@ public:
             return nullptr;
         }
         return data+n;
+    }
+
+    int getSize() const
+    {
+        return size;
     }
 };
 

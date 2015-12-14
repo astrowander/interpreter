@@ -2,12 +2,6 @@
 
 MyVariant::MyVariant(DataType m_dataType, real_type *m_data, int m_size, const QString& m_name) : dataType(m_dataType), size(m_size), name(m_name)
 {
-    if (m_data==nullptr || size<0) {
-        data = nullptr;
-        dataType = TYPEERROR;
-        return;
-    }
-
     switch (dataType) {
     case NUMBER:
         data = new real_type(*m_data);
@@ -23,11 +17,6 @@ MyVariant::MyVariant(DataType m_dataType, real_type *m_data, int m_size, const Q
         break;
     }
     //std::cout << "Constructor of variable is called" << std::endl;
-}
-
-MyVariant::MyVariant(Statement *m_statement)
-{
-
 }
 
 MyVariant::MyVariant(const MyVariant &other)
@@ -94,7 +83,7 @@ std::valarray<real_type> MyVariant::toValarray() const
     return std::valarray<real_type>(data,size);
 }
 
-DataType MyVariant::getDataType()
+DataType MyVariant::getDataType() const
 {
     return dataType;
 }

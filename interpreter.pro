@@ -21,11 +21,21 @@ SOURCES += main.cpp \
     expressions.cpp \
     statement.cpp \
     block.cpp \
-    interpreter.cpp
+    interpreter.cpp \
+    scanner.cpp \
+    parser.cpp \
+    stringprocessor.cpp \
+    definitions.cpp \
+    preprocessor.cpp
 
 HEADERS += \
     myvariant.h \
     expressions.h \
     statement.h \
     block.h \
-    interpreter.h
+    interpreter.h \
+    scanner.h \
+    parser.h \
+    stringprocessor.h \
+    definitions.h \
+    preprocessor.h
