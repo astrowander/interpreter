@@ -3,11 +3,11 @@
 MyVariant::MyVariant(DataType m_dataType, real_type *m_data, int m_size, const QString& m_name) : dataType(m_dataType), size(m_size), name(m_name)
 {
     switch (dataType) {
-    case NUMBER:
+    case REAL:
         data = new real_type(*m_data);
         //delete m_data;
         break;
-    case ARRAY:
+    case REALARRAY:
         data = new real_type[size];
         std::copy(m_data, m_data+m_size, data);
         //if (m_data!=nullptr) delete[] m_data;
@@ -25,11 +25,11 @@ MyVariant::MyVariant(const MyVariant &other)
     size = other.size;
     name=other.name;
     switch (other.dataType) {
-    case NUMBER:
+    case REAL:
         data = new  real_type;
         *data = *other.data;
         break;
-    case ARRAY:
+    case REALARRAY:
         data = new real_type[other.size];
         std::copy(other.data, other.data+other.size, data);
         break;
@@ -44,11 +44,11 @@ MyVariant &MyVariant::operator=(const MyVariant &other)
     //
 
     switch (other.dataType) {
-    case NUMBER:
+    case REAL:
         data = new  real_type;
         *data = *other.data;
         break;
-    case ARRAY:
+    case REALARRAY:
         data = new real_type[other.size];
         std::copy(other.data, other.data+other.size, data);
         break;
@@ -58,10 +58,10 @@ MyVariant &MyVariant::operator=(const MyVariant &other)
 
 MyVariant::~MyVariant() {
     //std::cout << "Destructor of variable is called" << std::endl;
-    if (dataType==NUMBER && data!=nullptr) {
+    if (dataType==REAL && data!=nullptr) {
         delete data;
     }
-    else if (dataType == ARRAY) { //dataType == ARRAY
+    else if (dataType == REALARRAY) { //dataType == ARRAY
         delete[] data;
     }
 }
@@ -73,7 +73,7 @@ real_type MyVariant::toRealType() const
 
 bool MyVariant::setValue()
 {
-    if (dataType==NUMBER) {
+    if (dataType==REAL) {
 
     }
 }

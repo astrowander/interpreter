@@ -11,11 +11,13 @@ class Statement
 private:
     AbstractExpr* currentNode;
     AbstractExpr* root;
+    QString codeString;
 public:
-    Statement()
+    Statement(const QString& ss = "")
     {
         root = nullptr;
         currentNode = root;
+        codeString = ss;
     }
 
     ~Statement()

@@ -22,9 +22,11 @@ void Interpreter::run()
         if (currentString=="") continue;
         if (currentString=="exit") break;
 
-        QList<QString> list = preprocessor.preprocess(currentString);
+        QStringList list = preprocessor.preprocess(currentString);
         foreach (QString ss , list) {
-            currentStatement = new Statement();
+            ss = ss.trimmed();
+            if (ss=="") continue;
+            currentStatement = new Statement(ss);
             if (!parser->parse(scanner.scan(ss), currentStatement)) continue;
             if (currentStatement->getRoot()!=nullptr) parser->getActiveBlock()->addStatement(currentStatement);
 

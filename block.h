@@ -22,16 +22,22 @@ private:
 public:
     Block(Block* m_parent = nullptr) : parent(m_parent)
     {
-        m_id = number++;
-        variablesMap.insert("result", MyVariant(NUMBER,new real_type(0),0,"result"));
+        init();
     }
 
     Block(Block* m_parent, const QList<QString>& parameters = QList<QString>())  : parent(m_parent)
     {
+        init();
         foreach (QString name, parameters) {
             addVariable(name);
             addIncomingParameter(name);
         }
+    }
+
+    void init()
+    {
+        m_id = number++;
+        variablesMap.insert("result", MyVariant(REAL,new real_type(0),0,"result"));
     }
 
     bool addStatement(Statement* m_statement)
@@ -88,7 +94,7 @@ public:
         functionsMap.remove(name);
     }
 
-    void addVariable(const QString& ss, DataType dataType = NUMBER, int m_size = 0, real_type* data = new real_type(0))
+    void addVariable(const QString& ss, DataType dataType = REAL, int m_size = 0, real_type* data = new real_type(0))
     {
         variablesMap.insert(ss, MyVariant(dataType, data, m_size, ss));        
     }
@@ -131,16 +137,5 @@ public:
 
     friend int getLevel(Block* block);
 };
-/*
-class Function :public Block
-{
-    Function(Block* m_parent = nullptr, const QList<QString>& parameters = QList<QString>())  :Block(m_parent)
-    {
-        foreach (QString name, parameters) {
-            addVariable(name);
-        }
-    }
-};
-*/
 
 #endif // BLOCK_H

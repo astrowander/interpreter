@@ -12,7 +12,8 @@ private:
     StringProcessor sp;
     bool outputResult;
 
-    const QVector<QString> keywords = {"delete", "display", "function", "end"};
+    const QVector<QString> keywords = {"display", "function", "var", "end"};
+    const QVector<QString> presetFunctions = {"abs", "log", "sqrt"};
 
     bool add();
     bool substract();

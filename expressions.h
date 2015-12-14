@@ -5,6 +5,7 @@
 
 class Block;
 typedef void (Block::* PointerToRun) (MyVariant&, const QList<MyVariant>&);
+typedef void (Block::* PointerToAdd) (const QString&, DataType, int, real_type*);
 typedef void (Block::* PointerToDel) (const QString&);
 
 
@@ -63,12 +64,12 @@ public:
     ArrayElement(MyVariant& m_value, int m_index) : value(m_value), index(m_index) {}
 
     bool assign(const MyVariant &rvalue) {
-        if (rvalue.getDataType()!=NUMBER) {
+        if (rvalue.getDataType()!=REAL) {
             reportError("Array element could be assigned only number");
             return false;
         }
 
-        if (value.getDataType()!=ARRAY) {
+        if (value.getDataType()!=REALARRAY) {
             reportError("It isn't' array");
             return false;
         }
@@ -82,15 +83,16 @@ public:
 
     MyVariant eval()
     {
-        if (value.getDataType()!=ARRAY) {
+        if (value.getDataType()!=REALARRAY) {
             reportError("It isn't' array");
             return MyVariant(VOID);
         }
         if (index>=value.getSize()) {
+
             reportError("Out of bounds");
             return MyVariant(VOID);
         }
-        return MyVariant(NUMBER,value.atPtr(index));
+        return MyVariant(REAL,value.atPtr(index));
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -161,6 +163,36 @@ public:
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
     {
         CallFunction* cloned = new CallFunction(parentBlock, pToRun);
+        cloned->parent = m_parent;
+        foreach (AbstractExpr* expr, arguments)
+        {
+            cloned->arguments.append(expr->clone(cloned));
+        }
+        return cloned;
+    }
+};
+
+class InitializerList : public Op
+{
+private:
+    QString name;
+public:
+    InitializerList(const QString& m_name = "")
+        : name(m_name)
+    {}
+
+    MyVariant eval()
+    {
+        int size = arguments.size();
+        real_type* array = new real_type[size];
+        for (int i=0; i<size; ++i)
+            array[i] = arguments[i]->eval().toRealType();
+        return MyVariant(REALARRAY,array,size,name);
+    }
+
+    AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
+    {
+        InitializerList* cloned = new InitializerList(name);
         cloned->parent = m_parent;
         foreach (AbstractExpr* expr, arguments)
         {
@@ -295,6 +327,52 @@ class PowerOp : public Op
         return cloned;
     }
 };
+
+class SqrtOp : public Op
+{
+    MyVariant eval() {
+        return mySqrt(right->eval());
+    }
+
+    AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
+    {
+        SqrtOp* cloned = new SqrtOp();
+        cloned->parent = m_parent;
+        if (right!=nullptr) cloned->right = right->clone(cloned);
+        return cloned;
+    }
+};
+
+class LogOp : public Op
+{
+    MyVariant eval() {
+        return myLog(right->eval());
+    }
+
+    AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
+    {
+        LogOp* cloned = new LogOp();
+        cloned->parent = m_parent;
+        if (right!=nullptr) cloned->right = right->clone(cloned);
+        return cloned;
+    }
+};
+
+class AbsOp : public Op
+{
+    MyVariant eval() {
+        return myFabs(right->eval());
+    }
+
+    AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
+    {
+        AbsOp* cloned = new AbsOp();
+        cloned->parent = m_parent;
+        if (right!=nullptr) cloned->right = right->clone(cloned);
+        return cloned;
+    }
+};
+
 
 class AssignOp : public Op
 {

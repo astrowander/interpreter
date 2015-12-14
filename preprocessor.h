@@ -1,6 +1,8 @@
 #ifndef PREPROCESSOR_H
 #define PREPROCESSOR_H
 #include "stringprocessor.h"
+#include <QFile>
+#include <QTextStream>
 
 class Preprocessor
 {
@@ -9,10 +11,38 @@ private:
 public:
     Preprocessor(const QString& ss = "") : currentString(ss) {}
 
-    QList<QString> preprocess(const QString& ss)
+    QStringList preprocess(const QString& ss)
     {
-        StringProcessor sp(ss);
-        QList<QString> list;
+        //StringProcessor sp(ss);
+        QStringList list, tempList;
+        tempList = ss.split(' ');
+        if (tempList[0]=="import")
+        {
+            tempList.removeAt(0);
+            if (tempList.isEmpty()) {
+                reportExpected("Filename");
+                return QList<QString>();
+            }
+
+            QString filename = tempList.join(' ');
+            QFile importFile(filename);
+            if (!importFile.open(QIODevice::ReadOnly)) {
+                reportError("Unable to open file");
+                return QList<QString>();
+            }
+
+            QTextStream importStream(&importFile);
+            while (!importStream.atEnd())
+            {
+                list.append(preprocess(importStream.readLine()));
+            }
+            importFile.close();
+            /*foreach(QString str, list)
+                std::cout<<str.toStdString() << std::endl;*/
+            return list;
+        }
+
+/*
         int ntemp = 0;
 
         while (!sp.endOfString())
@@ -39,7 +69,7 @@ public:
                 stop = sp.getCursor();
                 sp.match('}');
                 sp.replace(start, stop, varName);
-                list.prepend(varName + "[" + QString::number(size) + "];");
+                list.prepend("var " + varName + "[" + QString::number(size) + "];");
                 ntemp++;
             }
             sp.getChar();
@@ -49,8 +79,10 @@ public:
         for (int i=0; i<ntemp; ++i) {
             list.append("delete temp" + QString::number(i));
         }
-        return list;
+     */
+        return QStringList(ss);
     }
+
 };
 
 #endif // PREPROCESSOR_H

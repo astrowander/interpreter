@@ -6,23 +6,7 @@ bool Parser::parse(QStringList list, Statement *m_currentStatement)
 
     switch (keywords.indexOf(list[0]))
     {
-    case 0: //delete
-        list.removeAt(0);
-        sp.setString(list.join(' '));
-
-        while (!sp.endOfString()) {
-            QString name = sp.getWord();
-            if (activeBlock->isVariableDeclared(name)) {
-                currentStatement->createNodeAbove(new DeleteVariable(activeBlock->getVariableByValue(name),activeBlock,&Block::deleteVariable));
-                //activeBlock->deleteVariable(name);
-                continue;
-            }
-            reportError("Variable " + name + "is not declared");
-            return false;
-        }
-        break;
-
-    case 1: //display
+    case 0: //display
         list.removeAt(0);
         sp.setString(list.join(' '));
 
@@ -36,7 +20,7 @@ bool Parser::parse(QStringList list, Statement *m_currentStatement)
         }
         break;
 
-    case 2: //function
+    case 1: //function
     {
         list.removeAt(0);
         sp.setString(list.join(' '));
@@ -44,8 +28,8 @@ bool Parser::parse(QStringList list, Statement *m_currentStatement)
         QString name = sp.getWord();
 
         if (activeBlock->isFunctionDeclared(name)) {
-            reportError ("function " + name + " is already declared");
-            return false;
+            reportWarning("Function " + name + " has been re-declared");
+            activeBlock->deleteFunction(name);
         }
 
         if (!sp.match('(')) return false;
@@ -91,6 +75,32 @@ bool Parser::parse(QStringList list, Statement *m_currentStatement)
         break;
     }
 
+    case 2: //var
+    {
+        list.removeAt(0);
+        sp.setString(list.join(' '));
+        QString name = sp.getWord();
+        if (sp.lookIs('[')) {
+
+            sp.match('[');
+
+            bool ok;
+            int size = sp.getInt(&ok);
+
+            if (!ok || !sp.match(']')) return false;
+
+            activeBlock->addVariable(name,REALARRAY,size,new real_type[size]);
+        }
+        else {
+            activeBlock->addVariable(name);
+        }
+
+        if (sp.lookIs('=')) {
+            sp.setString(name+sp.getCurrentString().mid(sp.getCursor()));
+            if (!assign()) return false;
+        }
+        break;
+    }
     case 3: //end
 
         if (activeBlock->getParent()==nullptr) {
@@ -163,12 +173,32 @@ bool Parser::ident()
 {
     QString name = sp.getWord();
 
-    Block* blockWhereFunctionCalled = activeBlock;
-    while(blockWhereFunctionCalled!=nullptr) {
-        if (blockWhereFunctionCalled->isFunctionDeclared(name)) {
+    if (presetFunctions.contains(name)) {
+        switch (presetFunctions.indexOf(name))
+        {
+        case 0: //abs
+            currentStatement->createRightChild(new AbsOp);
+            break;
+        case 1: //log
+            currentStatement->createRightChild(new LogOp);
+            break;
+        case 2: //sqrt
+            currentStatement->createRightChild(new SqrtOp);
+            break;
+        }
+
+        if(!sp.match('(')) return false;
+        if (!assign()) return false;
+        if(!sp.match(')')) return false;
+        return true;
+    }
+
+    Block* seeingBlock = activeBlock;
+    while(seeingBlock!=nullptr) {
+        if (seeingBlock->isFunctionDeclared(name)) {
             if (!sp.match('(')) return false;
 
-            Block* called = blockWhereFunctionCalled->getFunctionByName(name);
+            Block* called = seeingBlock->getFunctionByName(name);
             CallFunction* callFunction = new CallFunction(called, &Block::run);
             currentStatement->createRightChild(callFunction);
 
@@ -187,51 +217,35 @@ bool Parser::ident()
 
                 if (sp.lookIs(',')) sp.match(',');
             }
-        sp.match(')');
-        return true;
+            sp.match(')');
+            return true;
         }
-        blockWhereFunctionCalled = blockWhereFunctionCalled->getParent();
-    }
 
-    if (!activeBlock->isVariableDeclared(name))
-    {
-        if (sp.lookIs('[')) {
+        if (seeingBlock->isVariableDeclared(name)) {
+            if (!sp.lookIs('[')) {
+                currentStatement->createRightChild(new Variable(seeingBlock->getVariableByValue(name)));
+                return true;
+            }
 
             sp.match('[');
 
             bool ok;
-            int size = sp.getInt(&ok);
-
-            if (!ok || !sp.match(']')) return false;
-
-            activeBlock->addVariable(name,ARRAY,size,new real_type[size]);
+            int n = sp.getInt(&ok);
+            sp.skipSpaces();
+            if (!ok)
+            {
+                reportError("Invalid index");
+                return false;
+            }
+            currentStatement->createRightChild(new ArrayElement(seeingBlock->getVariableByValue(name),n));//Variable(MyVariant(NUMBER,activeBlock->getVariableByValue(name).atPtr(n,&ok))));
+            sp.match(']');
+            return true;
         }
-        else {
-            activeBlock->addVariable(name);
-        }
-
-        currentStatement->createRightChild(new Variable(activeBlock->getVariableByValue(name)));
-        return true;
+        seeingBlock = seeingBlock->getParent();
     }
 
-    if (!sp.lookIs('[')) {
-        currentStatement->createRightChild(new Variable(activeBlock->getVariableByValue(name)));
-        return true;
-    }
-
-    sp.match('[');
-
-    bool ok;
-    int n = sp.getInt(&ok);
-    sp.skipSpaces();
-    if (!ok)
-    {
-        reportError("Invalid index");
-        return false;
-    }
-    currentStatement->createRightChild(new ArrayElement(activeBlock->getVariableByValue(name),n));//Variable(MyVariant(NUMBER,activeBlock->getVariableByValue(name).atPtr(n,&ok))));
-    sp.match(']');
-    return true;
+    reportError("Variable or function " + name + " is not declared");
+    return false;
 }
 
 bool Parser::factor()
@@ -248,6 +262,29 @@ bool Parser::factor()
         return true;
     }
 
+    if (sp.lookIs('{'))
+    {
+        sp.match('{');
+        currentStatement->createRightChild(new InitializerList());
+        while (!sp.lookIs('}'))
+        {
+            Statement* buf = new Statement;
+            *buf = *currentStatement;
+            currentStatement->deleteTree();
+
+            if(!assign()) return false;
+
+            buf->getCurrentNode()->arguments.append( currentStatement->getRoot() );
+
+            *currentStatement = *buf;
+            delete buf;
+
+            if (sp.lookIs(',')) sp.match(',');
+        }
+        if(!sp.match('}')) return false;
+        return true;
+    }
+
     bool ok;
     real_type* v = new real_type(sp.getReal(&ok));
     sp.skipSpaces();
@@ -257,7 +294,7 @@ bool Parser::factor()
         return false;
     }
 
-    currentStatement->createRightChild(new Literal(MyVariant(NUMBER, v)));
+    currentStatement->createRightChild(new Literal(MyVariant(REAL, v)));
     delete v;
     return true;
 }
@@ -307,13 +344,13 @@ bool Parser::assign()
 {
     outputResult=true;
     if (sp.lookIsAddop()) {
-        currentStatement->createRightChild(new Literal(MyVariant(NUMBER, new real_type(0))));
+        currentStatement->createRightChild(new Literal(MyVariant(REAL, new real_type(0))));
     }
     else {
         if (!term()) return false;
     }
 
-     while (!sp.lookIs('\0') && !sp.lookIs(')') && !sp.lookIs(',') && !sp.lookIs(';'))
+     while (!sp.lookIs('\0') && !sp.lookIs(')') && !sp.lookIs(',') && !sp.lookIs(';') && !sp.lookIs('}'))
      {
          if (sp.lookIs('+')) {
              if (!add()) return false;
