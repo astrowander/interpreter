@@ -69,7 +69,7 @@ public:
             return false;
         }
 
-        if (value.getDataType()!=REALARRAY) {
+        if (!value.isArray()) {
             reportError("It isn't' array");
             return false;
         }
@@ -78,12 +78,12 @@ public:
             reportError("Out of bounds");
             return false;
         }
-        *(value.atPtr(index)) = rvalue.toRealType();
+        value.setElement(rvalue, index);
     }
 
     MyVariant eval()
     {
-        if (value.getDataType()!=REALARRAY) {
+        if (!value.isArray()) {
             reportError("It isn't' array");
             return MyVariant(VOID);
         }
@@ -92,7 +92,7 @@ public:
             reportError("Out of bounds");
             return MyVariant(VOID);
         }
-        return MyVariant(REAL,value.atPtr(index));
+        return MyVariant(value.getElement(index));
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -184,10 +184,24 @@ public:
     MyVariant eval()
     {
         int size = arguments.size();
-        real_type* array = new real_type[size];
+        /*real_type* array = new real_type[size];
         for (int i=0; i<size; ++i)
-            array[i] = arguments[i]->eval().toRealType();
-        return MyVariant(REALARRAY,array,size,name);
+            array[i] = arguments[i]->eval().toRealType();*/
+        QVector<MyVariant*> elements;
+        bool isTypesSame = true;
+        for (int i=0; i<size; ++i)
+        {
+            elements.append(new MyVariant(arguments[i]->eval()));
+            if (i>0)
+                isTypesSame &= (elements[i]->getDataType() == elements[i-1]->getDataType());
+        }
+
+        if (!isTypesSame) {
+            reportError("All the elements of array must belong to the same type");
+            return MyVariant(VOID);
+        }
+
+        return MyVariant(elements, name);
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -361,7 +375,7 @@ class LogOp : public Op
 class AbsOp : public Op
 {
     MyVariant eval() {
-        return myFabs(right->eval());
+        return myAbs(right->eval());
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override

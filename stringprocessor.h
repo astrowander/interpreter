@@ -20,7 +20,7 @@ public:
     void skipSpaces();
 
     QString getWord();
-    real_type getReal(bool *ok);
+    real_type getReal(bool *ok, bool *isInt);
     int getInt(bool *ok);
 
     bool endOfString () const

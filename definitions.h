@@ -6,6 +6,7 @@
 
 #include <QList>
 #include <QMap>
+#include <QPair>
 #include <QStack>
 #include <QString>
 #include <QStringList>

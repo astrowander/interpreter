@@ -89,7 +89,7 @@ bool Parser::parse(QStringList list, Statement *m_currentStatement)
 
             if (!ok || !sp.match(']')) return false;
 
-            activeBlock->addVariable(name,REALARRAY,size,new real_type[size]);
+            activeBlock->addVariable(name,REAL,size,new real_type[size]);
         }
         else {
             activeBlock->addVariable(name);
@@ -285,18 +285,28 @@ bool Parser::factor()
         return true;
     }
 
-    bool ok;
-    real_type* v = new real_type(sp.getReal(&ok));
-    sp.skipSpaces();
+    bool ok, isInt;
+    real_type tempReal = sp.getReal(&ok, &isInt);
+
     if (!ok) {
         reportError("Invalid number");
-        delete v;
         return false;
     }
 
-    currentStatement->createRightChild(new Literal(MyVariant(REAL, v)));
-    delete v;
-    return true;
+    if (!isInt) {
+        real_type* v = new real_type(tempReal);
+        sp.skipSpaces();
+        currentStatement->createRightChild(new Literal(MyVariant(v)));
+        delete v;
+        return true;
+   }
+   //else
+
+   int* v = new int(tempReal);
+   sp.skipSpaces();
+   currentStatement->createRightChild(new Literal(MyVariant(v)));
+   delete v;
+   return true;
 }
 
 bool Parser::doHighPriorityOperations()
@@ -344,7 +354,7 @@ bool Parser::assign()
 {
     outputResult=true;
     if (sp.lookIsAddop()) {
-        currentStatement->createRightChild(new Literal(MyVariant(REAL, new real_type(0))));
+        currentStatement->createRightChild(new Literal(MyVariant(new real_type(0))));
     }
     else {
         if (!term()) return false;

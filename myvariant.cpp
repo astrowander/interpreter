@@ -1,37 +1,63 @@
 #include "myvariant.h"
 
-MyVariant::MyVariant(DataType m_dataType, real_type *m_data, int m_size, const QString& m_name) : dataType(m_dataType), size(m_size), name(m_name)
+MyVariant::MyVariant(real_type *m_data, int m_size, const QString& m_name) : size(m_size), name(m_name)
 {
-    switch (dataType) {
-    case REAL:
+    v_isArray = !(size==-1);
+    dataType = REAL;
+    if (!v_isArray) {
         data = new real_type(*m_data);
-        //delete m_data;
-        break;
-    case REALARRAY:
-        data = new real_type[size];
-        std::copy(m_data, m_data+m_size, data);
-        //if (m_data!=nullptr) delete[] m_data;
-        break;
-    case TYPEERROR:
-        data = nullptr;
-        break;
+        return;
     }
+    //else
+    for (int i=0; i<size; ++i) {
+        elements.append(new MyVariant(m_data+i));
+    }
+
     //std::cout << "Constructor of variable is called" << std::endl;
+}
+
+MyVariant::MyVariant(int *m_data, int m_size, const QString &m_name) : size(m_size), name(m_name)
+{
+    v_isArray = !(size==-1);
+    dataType = INTEGER;
+    if (!v_isArray) {
+        data = new int(*m_data);
+        return;
+    }
+    //else
+    for (int i=0; i<size; ++i) {
+        elements.append(new MyVariant(m_data+i));
+    }
 }
 
 MyVariant::MyVariant(const MyVariant &other)
 {
-    dataType= other.dataType;
+    dataType = other.dataType;
     size = other.size;
-    name=other.name;
+    name = other.name;
+    v_isArray = other.v_isArray;
+
     switch (other.dataType) {
     case REAL:
-        data = new  real_type;
-        *data = *other.data;
+        if (!v_isArray) {
+            data = new  real_type;
+            *(real_type*)data = *(real_type*)other.data;
+            break;
+        }
+        for (int i=0; i<size; ++i) {
+            elements.append(new MyVariant((real_type*)other.elements[i]->data));
+        }
         break;
-    case REALARRAY:
-        data = new real_type[other.size];
-        std::copy(other.data, other.data+other.size, data);
+
+    case INTEGER:
+        if (!v_isArray) {
+            data = new  int;
+            *(int*) data = *(int*) other.data;
+            break;
+        }
+        for (int i=0; i<size; ++i) {
+            elements.append(new MyVariant((int*)other.elements[i]->data));
+        }
         break;
     }
    // std::cout << "copy construction\n";
@@ -39,52 +65,74 @@ MyVariant::MyVariant(const MyVariant &other)
 
 MyVariant &MyVariant::operator=(const MyVariant &other)
 {
-    dataType= other.dataType;
+    dataType = other.dataType;
     size = other.size;
-    //
+    v_isArray = other.v_isArray;
 
     switch (other.dataType) {
     case REAL:
-        data = new  real_type;
-        *data = *other.data;
+        if (!v_isArray) {
+            data = new  real_type;
+            *(real_type*)data = *(real_type*)other.data;
+            break;
+        }
+        for (int i=0; i<size; ++i) {
+            elements.append(new MyVariant((real_type*)other.elements[i]->data));
+        }
         break;
-    case REALARRAY:
-        data = new real_type[other.size];
-        std::copy(other.data, other.data+other.size, data);
+
+    case INTEGER:
+        if (!v_isArray) {
+            data = new  int;
+            *(int*) data = *(int*) other.data;
+            break;
+        }
+        for (int i=0; i<size; ++i) {
+            elements.append(new MyVariant((int*)other.elements[i]->data));
+        }
         break;
     }
-   // std::cout << "assignment operator\n";
+
+    name = other.name;
 }
 
 MyVariant::~MyVariant() {
     //std::cout << "Destructor of variable is called" << std::endl;
-    if (dataType==REAL && data!=nullptr) {
+    if (data!=nullptr && !v_isArray) {
         delete data;
     }
-    else if (dataType == REALARRAY) { //dataType == ARRAY
-        delete[] data;
+    else if (v_isArray) {
+        for (int i=0; i<size; ++i)
+            delete elements[i];
+        elements.clear();
     }
 }
 
 real_type MyVariant::toRealType() const
 {
-    return *data;
+    if (data!=nullptr)
+        return *(real_type*)data;
+
+    return elements.at(0)->toRealType();
 }
 
-bool MyVariant::setValue()
+int MyVariant::toInt() const
 {
-    if (dataType==REAL) {
+    if (data!=nullptr)
+        return *(int*)data;
 
+    return elements.at(0)->toInt();
+}
+
+std::valarray<real_type> MyVariant::toRealValarray() const
+{
+    std::valarray<real_type> result(size);
+    for (int i=0; i<size; ++i) {
+        result[i] = elements.at(i)->toRealType();
     }
-}
-
-std::valarray<real_type> MyVariant::toValarray() const
-{
-    return std::valarray<real_type>(data,size);
 }
 
 DataType MyVariant::getDataType() const
 {
     return dataType;
 }
-

@@ -37,7 +37,7 @@ public:
     void init()
     {
         m_id = number++;
-        variablesMap.insert("result", MyVariant(REAL,new real_type(0),0,"result"));
+        variablesMap.insert("result", MyVariant(new real_type(0), -1, "result"));
     }
 
     bool addStatement(Statement* m_statement)
@@ -94,9 +94,9 @@ public:
         functionsMap.remove(name);
     }
 
-    void addVariable(const QString& ss, DataType dataType = REAL, int m_size = 0, real_type* data = new real_type(0))
+    void addVariable(const QString& ss, DataType dataType = REAL, int m_size = -1, real_type* data = new real_type(0))
     {
-        variablesMap.insert(ss, MyVariant(dataType, data, m_size, ss));        
+        variablesMap.insert(ss, MyVariant(data, m_size, ss));
     }
 
     void addIncomingParameter(const QString& ss)

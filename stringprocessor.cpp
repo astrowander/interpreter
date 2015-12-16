@@ -50,7 +50,7 @@ QString StringProcessor::getWord()
 
 
 
-real_type StringProcessor::getReal(bool *ok)
+real_type StringProcessor::getReal(bool *ok, bool *isInt)
 {
     QString value = "";
     if (!look.isDigit()) reportExpected("Real");
@@ -58,7 +58,7 @@ real_type StringProcessor::getReal(bool *ok)
         value+=QString(look);
         getChar();
     }
-    //skipSpaces();
+    value.toInt(isInt);
     return value.toDouble(ok);
 }
 
