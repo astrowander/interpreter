@@ -99,11 +99,159 @@ public:
         return QPair<MyVariant, MyVariant>();
     }
 
-    friend MyVariant operator+(const MyVariant& m_v1, const MyVariant& m_v2)
+    friend MyVariant operator== (const MyVariant& m_v1, const MyVariant& m_v2)
     {
-       QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-       MyVariant& v1 = operands.first;
-       MyVariant& v2 = operands.second;
+        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
+        MyVariant& v1 = operands.first;
+        MyVariant& v2 = operands.second;
+
+        if (m_v1.v_isArray && m_v2.v_isArray) {
+
+            if (m_v1.size != m_v2.size)
+                return MyVariant(TYPEERROR);
+
+            bool result = true;
+            for (int i=0; i<m_v1.size; ++i) {
+                result &= (m_v1.elements.at(i) == m_v1.elements.at(i));
+            }
+            return MyVariant(new int(result));
+        }
+
+        switch (m_v1.dataType)
+        {
+        case REAL:
+            return MyVariant(new int(v1.toRealType() == v2.toRealType()));
+        case INTEGER:
+            return MyVariant(new int(v1.toInt() == v2.toInt()));
+        }
+    }
+
+    friend MyVariant operator< (const MyVariant& m_v1, const MyVariant& m_v2)
+    {
+        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
+        MyVariant& v1 = operands.first;
+        MyVariant& v2 = operands.second;
+
+        if (m_v1.v_isArray || m_v2.v_isArray) {
+           reportError("Arrays could be compared only by ==");
+           return MyVariant(TYPEERROR);
+        }
+
+        switch (m_v1.dataType)
+        {
+        case REAL:
+            return MyVariant(new int(v1.toRealType() < v2.toRealType()));
+        case INTEGER:
+            return MyVariant(new int(v1.toInt() < v2.toInt()));
+        }
+    }
+
+    friend MyVariant operator> (const MyVariant& m_v1, const MyVariant& m_v2)
+    {
+        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
+        MyVariant& v1 = operands.first;
+        MyVariant& v2 = operands.second;
+
+        if (m_v1.v_isArray || m_v2.v_isArray) {
+            reportError("Arrays could be compared only by ==");
+            return MyVariant(TYPEERROR);
+        }
+
+        switch (m_v1.dataType)
+        {
+        case REAL:
+            return MyVariant(new int(v1.toRealType() > v2.toRealType()));
+        case INTEGER:
+            return MyVariant(new int(v1.toInt() > v2.toInt()));
+        }
+    }
+
+    friend MyVariant operator<= (const MyVariant& m_v1, const MyVariant& m_v2)
+    {
+        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
+        MyVariant& v1 = operands.first;
+        MyVariant& v2 = operands.second;
+
+        if (m_v1.v_isArray || m_v2.v_isArray) {
+            reportError("Arrays could be compared only by ==");
+            return MyVariant(TYPEERROR);
+        }
+
+        switch (m_v1.dataType)
+        {
+        case REAL:
+            return MyVariant(new int(v1.toRealType() <= v2.toRealType()));
+        case INTEGER:
+            return MyVariant(new int(v1.toInt() <= v2.toInt()));
+        }
+    }
+
+    friend MyVariant operator>= (const MyVariant& m_v1, const MyVariant& m_v2)
+    {
+        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
+        MyVariant& v1 = operands.first;
+        MyVariant& v2 = operands.second;
+
+        if (m_v1.v_isArray || m_v2.v_isArray) {
+            reportError("Arrays could be compared only by ==");
+            return MyVariant(TYPEERROR);
+        }
+
+        switch (m_v1.dataType)
+        {
+        case REAL:
+            return MyVariant(new int(v1.toRealType() >= v2.toRealType()));
+        case INTEGER:
+            return MyVariant(new int(v1.toInt() >= v2.toInt()));
+        }
+    }
+
+    friend MyVariant operator !(const MyVariant& m_v1)
+    {
+        if (!m_v1.dataType==INTEGER || m_v1.v_isArray) {
+            return MyVariant(TYPEERROR);
+        }
+        return MyVariant(new int(!m_v1.toInt()));
+    }
+
+    friend MyVariant operator!= (const MyVariant& m_v1, const MyVariant& m_v2)
+    {
+        return !(m_v1 == m_v2);
+    }
+
+    friend MyVariant operator &&(const MyVariant& m_v1, const MyVariant& m_v2)
+    {
+        if (!(m_v1.dataType==INTEGER) || m_v1.v_isArray || !(m_v2.dataType==INTEGER) || m_v2.v_isArray) {
+            reportError("Operands must be integer");
+            return MyVariant(TYPEERROR);
+        }
+        return MyVariant(new int(m_v1.toInt() && m_v2.toInt()));
+    }
+
+    friend MyVariant operator ||(const MyVariant& m_v1, const MyVariant& m_v2)
+    {
+        if (!(m_v1.dataType==INTEGER) || m_v1.v_isArray || !(m_v2.dataType==INTEGER) || m_v2.v_isArray) {
+            reportError("Operands must be integer");
+            return MyVariant(TYPEERROR);
+        }
+        return MyVariant(new int(m_v1.toInt() || m_v2.toInt()));
+    }
+
+    //XOR
+    friend MyVariant doXor(const MyVariant& m_v1, const MyVariant& m_v2)
+    {
+        if (!(m_v1.dataType==INTEGER) || m_v1.v_isArray || !(m_v2.dataType==INTEGER) || m_v2.v_isArray) {
+            reportError("Operands must be integer");
+            return MyVariant(TYPEERROR);
+        }
+        return MyVariant(new int(!m_v1.toInt() != !m_v2.toInt()));
+    }
+
+    friend MyVariant operator+(const MyVariant& v1, const MyVariant& v2)
+    {
+       //QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
+       //MyVariant& v1 = operands.first;
+       //MyVariant& v2 = operands.second;
 
        if (v1.dataType==REAL) {
 
@@ -133,6 +281,28 @@ public:
 
             }
         }
+        return MyVariant(TYPEERROR);
+    }
+
+    friend MyVariant operator-(const MyVariant& m_v1)
+    {
+        if (m_v1.v_isArray)
+        {
+            QVector<MyVariant*> tempElements;
+            for (int i=0; i<m_v1.size; ++i) {
+                tempElements.append(new MyVariant(-(*m_v1.elements.at(i))));
+            }
+            return MyVariant(tempElements);
+        }
+
+        switch (m_v1.dataType)
+        {
+        case REAL:
+            return MyVariant(new real_type( -m_v1.toRealType()));
+        case INTEGER:
+            return MyVariant(new int(-m_v1.toInt()));
+        }
+
         return MyVariant(TYPEERROR);
     }
 

@@ -1,45 +1,75 @@
 #include "interpreter.h"
-/*
-Interpreter::Interpreter()
-{
-    activeBlock = &mainBlock;
-    forbidOutput = false;
-}
-*/
-
 
 void Interpreter::run()
 {
-    QTextStream inStream(stdin);
+    int nOfStatements=0;
+
     forever
     {
-        std::cout << ">>> ";
+        QStringList toParseList;
 
-        for (int i=0; i < getLevel(parser->getActiveBlock()); ++i)
-            std::cout << "    ";
+        int code = getStringList(toParseList);
 
-        QString currentString = inStream.readLine();
-        if (currentString=="") continue;
-        if (currentString=="exit") break;
+        if (code==1)
+            continue;
+        else if (code==2)
+            break;
 
-        QStringList list = preprocessor.preprocess(currentString);
-        foreach (QString ss , list) {
-            ss = ss.trimmed();
-            if (ss=="") continue;
-            currentStatement = new Statement(ss);
-            if (!parser->parse(scanner.scan(ss), currentStatement)) continue;
-            if (currentStatement->getRoot()!=nullptr) parser->getActiveBlock()->addStatement(currentStatement);
+        if (!parser->parse(toParseList)) continue;
 
-            if (parser->getActiveBlock()==&mainBlock) {
-                MyVariant result;
+        if (parser->getActiveBlock()==&mainBlock) {
 
-                if (currentStatement->getRoot() != nullptr)
-                    result = currentStatement->eval();
-
-                if(parser->doOutput())
-                    result.print();
+            if (nOfStatements==mainBlock.howManyStatements()) {
+                continue;
             }
-            delete currentStatement;
+            nOfStatements = mainBlock.howManyStatements();
+
+            QTime timer;
+            timer.start();
+            MyVariant result;
+            mainBlock.runLast(result);
+            if(parser->doOutput())
+                result.print();            
+            std::cout << "Time elapsed: " << timer.elapsed() << std::endl;
         }
     }
 }
+
+int Interpreter::getStringList(QStringList& stringList)
+{
+   QString currentString;
+
+   if (buffer.isEmpty()) {
+       std::cout << ">>> ";
+       for (int i=0; i < getLevel(parser->getActiveBlock()); ++i)
+           std::cout << "    ";
+       currentString = inStream.readLine();
+   }
+
+   else {
+       currentString = buffer.first();
+       buffer.pop_front();
+   }
+   currentString = currentString.trimmed();
+
+   if (currentString=="") return 1;
+   if (currentString=="exit") return 2;
+
+   bool ok;
+   QStringList list = preprocessor.preprocess(currentString, &ok);
+   if (!ok) return 1;
+
+   if (!list.isEmpty()) {
+       buffer.append(list);
+       return 1;
+   }
+
+   stringList = scanner.scan(currentString);
+   return 0;
+}
+
+void Interpreter::addToBuffer(const QString &ss)
+{
+    buffer.prepend(ss);
+}
+

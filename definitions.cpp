@@ -10,7 +10,6 @@ void reportRuntimeError(const QString &ss)
     std::cout << "Runtime error: " << ss.toStdString() << std::endl;
 }
 
-
 void reportWarning(const QString &ss)
 {
     std::cout << "Warning: " << ss.toStdString() << "." << std::endl;

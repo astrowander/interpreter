@@ -11,9 +11,10 @@ private:
 public:
     Preprocessor(const QString& ss = "") : currentString(ss) {}
 
-    QStringList preprocess(const QString& ss)
+    QStringList preprocess(const QString& ss, bool* ok)
     {
         //StringProcessor sp(ss);
+        *ok = false;
         QStringList list, tempList;
         tempList = ss.split(' ');
         if (tempList[0]=="import")
@@ -34,53 +35,13 @@ public:
             QTextStream importStream(&importFile);
             while (!importStream.atEnd())
             {
-                list.append(preprocess(importStream.readLine()));
+                list.append(importStream.readLine());
             }
             importFile.close();
-            /*foreach(QString str, list)
-                std::cout<<str.toStdString() << std::endl;*/
-            return list;
         }
 
-/*
-        int ntemp = 0;
-
-        while (!sp.endOfString())
-        {
-            if (sp.lookIs('{')) {
-                int start, stop;
-                start = sp.getCursor();
-
-                QString varName = "temp" + QString::number(ntemp);
-                int size = 0;
-
-                sp.match('{');
-                while (!sp.lookIs('}')) {
-                    ++size;
-                    QString ss = varName + "[" + QString::number(size-1) + "]=";
-                    while ( !sp.lookIs(',') && !sp.lookIs('}')) {
-                        ss+=sp.getLook();
-                        sp.getChar();
-                    }
-                    ss+=";";
-                    list.append(ss);
-                    if (sp.lookIs(',')) sp.match(',');
-                }
-                stop = sp.getCursor();
-                sp.match('}');
-                sp.replace(start, stop, varName);
-                list.prepend("var " + varName + "[" + QString::number(size) + "];");
-                ntemp++;
-            }
-            sp.getChar();
-        }
-        list.append(sp.getCurrentString());
-
-        for (int i=0; i<ntemp; ++i) {
-            list.append("delete temp" + QString::number(i));
-        }
-     */
-        return QStringList(ss);
+        *ok = true;
+        return list;
     }
 
 };

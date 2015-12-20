@@ -68,6 +68,7 @@ MyVariant &MyVariant::operator=(const MyVariant &other)
     dataType = other.dataType;
     size = other.size;
     v_isArray = other.v_isArray;
+    elements.clear();
 
     switch (other.dataType) {
     case REAL:

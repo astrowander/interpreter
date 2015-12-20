@@ -1,6 +1,7 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
+#include <QTime>
 #include <QTextStream>
 #include "scanner.h"
 #include "parser.h"
@@ -10,18 +11,19 @@ class Interpreter
 {
 private:
     Block mainBlock;
-    //Block* activeBlock;
-    Statement* currentStatement;
 
     Scanner scanner;
     Parser* parser;
     Preprocessor preprocessor;
 
+    QStringList buffer;
+    QTextStream inStream;
+
 public:
 
-    Interpreter()
+    Interpreter() : inStream(stdin)
     {
-        parser = new Parser(&mainBlock);
+        parser = new Parser(&mainBlock, this, &Interpreter::getStringList, &Interpreter::addToBuffer);
     }
 
     ~Interpreter()
@@ -29,9 +31,9 @@ public:
         delete parser;
     }
 
-    QList<QString> preprocess();
-
     void run();
+    int getStringList(QStringList &stringList);
+    void addToBuffer(const QString& ss);
 };
 
 #endif // INTERPRETER_H

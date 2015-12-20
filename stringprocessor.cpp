@@ -29,6 +29,27 @@ bool StringProcessor::lookIsAddop() const
     return false;
 }
 
+bool StringProcessor::lookIsMulop() const
+{
+    if (look =='*' or look =='/') return true;
+    return false;
+}
+
+bool StringProcessor::lookIsRelop() const
+{
+    if (look == '<' or look == '>' or look == '=' or look =='!')
+        return true;
+    return false;
+}
+
+bool StringProcessor::lookIsAssignmentOp() const
+{
+    if (lookIs('=') && !nextIs('='))
+        return true;
+
+    return false;
+}
+
 void StringProcessor::skipSpaces()
 {
     while (look.isSpace()) {
@@ -73,9 +94,9 @@ int StringProcessor::getInt(bool* ok)
     return value.toInt(ok);
 }
 
-QString StringProcessor::getLook() const
+QChar StringProcessor::getLook() const
 {
-    return QString(look);
+    return look;
 }
 
 

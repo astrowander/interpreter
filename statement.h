@@ -195,7 +195,8 @@ public:
 
     void goUp()
     {
-        currentNode = currentNode->parent;
+        if (currentNode->parent != nullptr)
+            currentNode = currentNode->parent;
     }
 
     AbstractExpr* getRoot() const
@@ -209,7 +210,14 @@ public:
     }
 
     MyVariant eval() const {
-        return root->eval();
+        if (root!=nullptr)
+            return root->eval();
+        return MyVariant(VOID);
+    }
+
+    void setCurrentNodeToRoot()
+    {
+        currentNode = root;
     }
 };
 

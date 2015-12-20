@@ -17,6 +17,10 @@ public:
     void getChar();
     bool match(QChar ch);
     bool lookIsAddop() const;
+    bool lookIsMulop() const;
+    bool lookIsRelop() const;
+    bool lookIsAssignmentOp() const;
+
     void skipSpaces();
 
     QString getWord();
@@ -40,6 +44,14 @@ public:
             result == result || (ch == look);
         }
         return result;
+    }
+
+    bool nextIs(QChar ch) const
+    {
+        if (cursor >= currentString.size()-1)
+            return false;
+
+        return currentString.at(cursor+1) == ch;
     }
 
     bool lookIsLetter()
@@ -76,7 +88,7 @@ public:
     {
         return currentString;
     }
-    QString getLook() const;
+    QChar getLook() const;
 };
 
 #endif // STRINGPROCESSOR_H

@@ -16,16 +16,22 @@ private:
     Statement* activeStatement;
 
     QList<QString> incomingParameters;
+    QMap <int, Block*> childBlocksMap;
     QMap <QString, Block*> functionsMap;
     QMap <QString, MyVariant> variablesMap;
 
 public:
-    Block(Block* m_parent = nullptr) : parent(m_parent)
+    Block() : parent(nullptr)
     {
         init();
     }
 
-    Block(Block* m_parent, const QList<QString>& parameters = QList<QString>())  : parent(m_parent)
+    Block(Block* m_parent) : parent (m_parent)
+    {
+        m_id = number++;
+    }
+
+    Block(Block* m_parent, const QList<QString>& parameters)  : parent(m_parent)
     {
         init();
         foreach (QString name, parameters) {
@@ -37,7 +43,7 @@ public:
     void init()
     {
         m_id = number++;
-        variablesMap.insert("result", MyVariant(new real_type(0), -1, "result"));
+        variablesMap.insert("result", MyVariant(new int(0), -1, "result"));
     }
 
     bool addStatement(Statement* m_statement)
@@ -73,6 +79,15 @@ public:
         return parent;
     }
 
+    Block* getChildBlockByNumber(int n)
+    {
+        if (!childBlocksMap.contains(n)) {
+            reportError("Bad pointer");
+            return nullptr;
+        }
+        return childBlocksMap[n];
+    }
+
     MyVariant& getVariableByValue(const QString& ss)
     {
        return variablesMap[ss];
@@ -81,6 +96,23 @@ public:
     void addFunction(const QString& name, const QList<QString>& parameters)
     {
         functionsMap.insert(name, new Block(this,parameters));
+    }
+
+    int addChildBlock()
+    {
+        childBlocksMap.insert(number-1, new Block(this));
+        return number - 1;
+    }
+
+    void deleteChildBlock(int number)
+    {
+        if (!childBlocksMap.contains(number))
+        {
+            reportError("Bad pointer");
+            return;
+        }
+        delete childBlocksMap[number];
+        childBlocksMap.remove(number);
     }
 
     void deleteFunction(const QString& name)
@@ -113,6 +145,18 @@ public:
         variablesMap.remove(ss);
     }
 
+    void runChildBlock(int id)
+    {
+        if (id==-1) return;
+
+        if (!childBlocksMap.contains(id)) {
+            reportError("Bad pointer");
+            return;
+        }
+        MyVariant temp;
+        childBlocksMap[id]->run(temp);
+    }
+
     void run(MyVariant& result, const QList<MyVariant> &parameters = QList<MyVariant>())
     {
         if (parameters.size()!=incomingParameters.size())
@@ -135,7 +179,23 @@ public:
         result = variablesMap["result"];
     }
 
+    void runLast(MyVariant& result)
+    {
+        if (!statements.isEmpty())
+            result = statements.last()->eval();
+    }
+
     friend int getLevel(Block* block);
+
+    int getId()
+    {
+        return m_id;
+    }
+
+    int howManyStatements()
+    {
+        return statements.size();
+    }
 };
 
 #endif // BLOCK_H

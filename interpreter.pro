@@ -3,7 +3,8 @@
 # Project created by QtCreator 2015-11-28T09:34:53
 #
 #-------------------------------------------------
-QMAKE_CXXFLAGS += -std=gnu++11
+QMAKE_CXXFLAGS += -std=gnu++11# \
+                    #-O2
 
 QT       += core
 
