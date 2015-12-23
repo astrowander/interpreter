@@ -7,6 +7,8 @@ class Interpreter;
 typedef int(Interpreter::*PointerToGetStringList) (QStringList&);
 typedef void(Interpreter::*PointerToAddBuffer) (const QString&);
 
+
+
 class Parser
 {
 
@@ -19,8 +21,9 @@ private:
     PointerToAddBuffer pToAddBuf;
     bool outputResult;
 
-    const QVector<QString> keywords = {"display", "function", "if", "var", "while", "end"};
+    const QVector<QString> keywords = {"display", "function", "if", "loop", "var", "while", "end"};
     const QVector<QString> presetFunctions = {"abs", "log", "sqrt"};
+    MyCache *stack;
 
     bool add();
     bool substract();
@@ -42,7 +45,7 @@ private:
     bool boolTerm();
     bool notFactor();
 public:
-    Parser (Block *m_activeBlock, Interpreter* m_interpreter, PointerToGetStringList m_pToGet, PointerToAddBuffer m_pToAddBuf) : activeBlock(m_activeBlock), interpreter(m_interpreter), pToGet(m_pToGet) , pToAddBuf(m_pToAddBuf) {}
+    Parser (Block *m_activeBlock, Interpreter* m_interpreter, PointerToGetStringList m_pToGet, PointerToAddBuffer m_pToAddBuf, MyCache *m_stack) : activeBlock(m_activeBlock), interpreter(m_interpreter), pToGet(m_pToGet) , pToAddBuf(m_pToAddBuf), stack(m_stack) {}
     Block* getActiveBlock()
     {
         return activeBlock;

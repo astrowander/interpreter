@@ -16,9 +16,11 @@ private:
     Statement* activeStatement;
 
     QList<QString> incomingParameters;
-    QMap <int, Block*> childBlocksMap;
+    //QMap <int, Block*> childBlocksMap;
+    Block* childBlocksMap[1024];
     QMap <QString, Block*> functionsMap;
     QMap <QString, MyVariant> variablesMap;
+    MyVariant* resultPtr;
 
 public:
     Block() : parent(nullptr)
@@ -29,6 +31,7 @@ public:
     Block(Block* m_parent) : parent (m_parent)
     {
         m_id = number++;
+        resultPtr = nullptr;
     }
 
     Block(Block* m_parent, const QList<QString>& parameters)  : parent(m_parent)
@@ -43,7 +46,8 @@ public:
     void init()
     {
         m_id = number++;
-        variablesMap.insert("result", MyVariant(new int(0), -1, "result"));
+        variablesMap.insert("result", MyVariant(new int(0), -1));
+        resultPtr = &variablesMap["result"];
     }
 
     bool addStatement(Statement* m_statement)
@@ -81,10 +85,10 @@ public:
 
     Block* getChildBlockByNumber(int n)
     {
-        if (!childBlocksMap.contains(n)) {
+        /*if (!childBlocksMap.contains(n)) {
             reportError("Bad pointer");
             return nullptr;
-        }
+        }*/
         return childBlocksMap[n];
     }
 
@@ -100,19 +104,21 @@ public:
 
     int addChildBlock()
     {
-        childBlocksMap.insert(number-1, new Block(this));
+        //childBlocksMap.insert(number-1, new Block(this));
+        //return number - 1;
+        childBlocksMap[number-1] = new Block(this);
         return number - 1;
     }
 
     void deleteChildBlock(int number)
     {
-        if (!childBlocksMap.contains(number))
+       /* if (!childBlocksMap.contains(number))
         {
             reportError("Bad pointer");
             return;
         }
         delete childBlocksMap[number];
-        childBlocksMap.remove(number);
+        childBlocksMap.remove(number);*/
     }
 
     void deleteFunction(const QString& name)
@@ -128,7 +134,7 @@ public:
 
     void addVariable(const QString& ss, DataType dataType = REAL, int m_size = -1, real_type* data = new real_type(0))
     {
-        variablesMap.insert(ss, MyVariant(data, m_size, ss));
+        variablesMap.insert(ss, MyVariant(data, m_size));
     }
 
     void addIncomingParameter(const QString& ss)
@@ -149,26 +155,28 @@ public:
     {
         if (id==-1) return;
 
-        if (!childBlocksMap.contains(id)) {
+       /* if (!childBlocksMap.contains(id)) {
             reportError("Bad pointer");
             return;
-        }
-        MyVariant temp;
-        childBlocksMap[id]->run(temp);
+        }*/
+        childBlocksMap[id]->run();
     }
 
-    void run(MyVariant& result, const QList<MyVariant> &parameters = QList<MyVariant>())
+    void run(MyVariant* result = nullptr, QList<MyVariant> *parameters = nullptr)
     {
-        if (parameters.size()!=incomingParameters.size())
+        if (parameters != nullptr)
         {
-            reportError("Invalid number of parameters");
-            result = MyVariant();
-            return;
-        }
+            if (parameters->size()!=incomingParameters.size())
+            {
+                reportError("Invalid number of parameters");
+                *result = MyVariant();
+                return;
+            }
 
-        for(int i=0; i<parameters.size(); ++i)
-        {
-            variablesMap[incomingParameters[i]] = parameters[i];
+            for(int i=0; i<parameters->size(); ++i)
+            {
+                variablesMap[incomingParameters[i]] = (*parameters).at(i);
+            }
         }
 
         foreach (Statement* statement, statements)
@@ -176,13 +184,14 @@ public:
             statement->eval();
         }
 
-        result = variablesMap["result"];
+        if (resultPtr!=nullptr)
+            *result = *resultPtr;
     }
 
-    void runLast(MyVariant& result)
+    void runLast(MyVariant* result)
     {
         if (!statements.isEmpty())
-            result = statements.last()->eval();
+          *result = statements.last()->eval();
     }
 
     friend int getLevel(Block* block);

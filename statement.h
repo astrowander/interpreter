@@ -209,9 +209,12 @@ public:
         return currentNode;
     }
 
-    MyVariant eval() const {
+    const MyVariant& eval() const {
         if (root!=nullptr)
-            return root->eval();
+        {
+            root->eval();
+            return root->value;
+        }
         return MyVariant(VOID);
     }
 

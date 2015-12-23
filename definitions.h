@@ -4,6 +4,7 @@
 #include <iostream>
 #include <valarray>
 
+#include <QHash>
 #include <QList>
 #include <QMap>
 #include <QPair>

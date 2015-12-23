@@ -10,16 +10,15 @@ private:
     DataType dataType;
     void* data;
 
-    QVector<MyVariant*> elements;
-    QString name;
+    QList<MyVariant*> elements;
     int size;
     bool v_isArray;
 
 public:
-    MyVariant(DataType m_dataType=VOID) : dataType(m_dataType), data(nullptr), name(""), size(-1), v_isArray(false) {}
-    MyVariant(real_type* m_data, int m_size=-1, const QString& m_name="");
-    MyVariant(int* m_data, int m_size=-1, const QString& m_name="");
-    MyVariant(QVector<MyVariant*> &m_elements, const QString& m_name = "") : data(nullptr), dataType(VOID), elements(m_elements) , name(m_name), size(m_elements.size()), v_isArray(true)
+    MyVariant(DataType m_dataType=VOID) : dataType(m_dataType), data(nullptr), size(-1), v_isArray(false) {}
+    MyVariant(real_type* m_data, int m_size=-1);
+    MyVariant(int* m_data, int m_size=-1);
+    MyVariant(QList<MyVariant*> &m_elements) : data(nullptr), dataType(VOID), elements(m_elements), size(m_elements.size()), v_isArray(true)
     {
         if (!elements.isEmpty())
             dataType = elements.at(0)->getDataType();
@@ -37,8 +36,7 @@ public:
     MyVariant castTo(DataType otherDataType) const
     {
         MyVariant result;
-        result.size = size;
-        result.name = name;
+        result.size = size;        
         result.v_isArray = v_isArray;
         result.dataType = otherDataType;
 
@@ -123,6 +121,8 @@ public:
             return MyVariant(new int(v1.toRealType() == v2.toRealType()));
         case INTEGER:
             return MyVariant(new int(v1.toInt() == v2.toInt()));
+        default:
+            return MyVariant();
         }
     }
 
@@ -288,7 +288,7 @@ public:
     {
         if (m_v1.v_isArray)
         {
-            QVector<MyVariant*> tempElements;
+            QList<MyVariant*> tempElements;
             for (int i=0; i<m_v1.size; ++i) {
                 tempElements.append(new MyVariant(-(*m_v1.elements.at(i))));
             }
@@ -527,16 +527,11 @@ public:
             return MyVariant(result,v1.size);
         }
         return MyVariant(TYPEERROR);
-    }
-
-    QString getName() const
-    {
-        return name;
-    }
+    }    
 
     void print() const
     {
-        QString result = "\n" + name + " = ";
+        QString result = "\n= ";
 
         switch (dataType)
         {
@@ -614,6 +609,41 @@ public:
         return *elements.at(n);
     }
 
+    void reset()
+    {
+        dataType = VOID;
+        if (data!=nullptr) {
+            delete data;
+            data = nullptr;
+        }
+        size = -1;
+        v_isArray = false;
+        elements.clear();
+    }
+
 };
 
+class MyCache
+{
+private:
+    MyVariant cache[1024];
+    int iterator;
+public:
+    MyCache() : iterator(-1) {}
+
+    void push(const MyVariant &toPush)
+    {
+        cache[++iterator] = toPush;
+    }
+
+    MyVariant& last()
+    {
+        return cache[iterator];
+    }
+
+    void removeLast()
+    {
+        cache[iterator--].reset();
+    }
+};
 #endif // MYVARIANT_H
