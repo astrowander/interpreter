@@ -11,7 +11,7 @@
 #include "myvariant.h"
 
 class Block;
-typedef void (Block::* PointerToRun) (MyVariant*, QList<MyVariant>*);
+typedef void (Block::* PointerToRun) (MyVariant*, QList<MyVariant*>*);
 typedef void (Block::*PointerToRunChild) (int);
 typedef void (Block::* PointerToAdd) (const QString&, DataType, int, real_type*);
 
@@ -23,25 +23,24 @@ public:
     AbstractExpr* right;
     QList<AbstractExpr*> arguments;
     MyCache* stack;
-    MyVariant& value;
-    AbstractExpr(MyVariant& m_value) : value (m_value)
+    MyVariant* value;
+    AbstractExpr(MyVariant* m_value) : value (m_value)
     {
         parent = left = right = nullptr;
     }
     virtual ~AbstractExpr() {}
     inline virtual void eval() = 0;
-    virtual bool assign(const MyVariant& rvalue) = 0;
+    virtual bool assign(MyVariant* rvalue) = 0;
     virtual AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const = 0;
 };
 
 class Literal: public AbstractExpr
 {
-private:
-    MyVariant& value;
-public:
-    Literal(MyVariant& m_value) : value(m_value), AbstractExpr(m_value) {}
 
-    bool assign(const MyVariant& rvalue) {
+public:
+    Literal(MyVariant* m_value) : AbstractExpr(m_value) {}
+
+    bool assign(MyVariant* rvalue) {
         return false;
     }
 
@@ -61,16 +60,16 @@ class ArrayElement: public AbstractExpr
 {
 
 public:
-    ArrayElement(MyVariant& m_value) : AbstractExpr(m_value) {}
+    ArrayElement(MyVariant* m_value) : AbstractExpr(m_value) {}
 
-    int getIndex()
+   /* int getIndex()
     {
         right->eval();
         MyVariant temp( right->value) ;
         if (temp.getDataType()==INTEGER && !temp.isArray())
         {
             int result = temp.toInt();
-            if (result>=0 && result < value.getSize())
+            if (result>=0 && result < value->getSize())
                 return result;
             else {
                 reportError("Bad index");
@@ -79,26 +78,26 @@ public:
         }
         reportError("Index must be an integer number");
         return -1;
-    }
+    }*/
 
-    bool assign(const MyVariant &rvalue) {
-        if (rvalue.getDataType()!=value.getDataType() ) {
+    bool assign(MyVariant *rvalue) {
+       /* if (rvalue->getDataType()!=value->getDataType() ) {
             reportError("Array element could be assigned same type");
             return false;
         }
 
-        if (!value.isArray()) {
+        if (!value->isArray()) {
             reportError("It isn't' array");
             return false;
         }
         int index = getIndex();
-        value.setElement(rvalue, index);
-        return true;
+        value->setElement(rvalue, index);
+        return true;*/
     }
 
     void eval()
     {
-        if (!value.isArray()) {
+       /* if (!value->isArray()) {
             reportError("It isn't' array");
         }
 
@@ -106,34 +105,34 @@ public:
 
         if (index!=-1)
         {
-            value = MyVariant(value.getElement(index));
+            value = MyVariant(value->getElement(index));
         }
         else
-            return;
+            return;*/
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
     {
+        /*
         ArrayElement* cloned = new ArrayElement(value);
-        CLONE
+        CLONE*/
     }
-
 };
 
 class Variable: public AbstractExpr
 {
 
 public:
-    Variable(MyVariant& m_value) : AbstractExpr(m_value) {}
+    Variable(MyVariant* m_value) : AbstractExpr(m_value) {}
 
     void eval()
     {
 
     }
 
-    bool assign(const MyVariant &rvalue) {
-        value = rvalue;
-        //std::cout << value.print().toStdString();
+    bool assign(MyVariant *rvalue) {
+        *value = *rvalue;
+        //std::cout << value->print().toStdString();
         return true;
     }
 
@@ -147,8 +146,8 @@ public:
 class Op : public AbstractExpr
 {
 public:
-    Op(MyVariant& m_value) : AbstractExpr(m_value) {}
-    bool assign(const MyVariant& rvalue) {
+    Op(MyVariant* m_value) : AbstractExpr(m_value) {}
+    bool assign(MyVariant* rvalue) {
         return false;
     }
 };
@@ -163,17 +162,17 @@ private:
     Block* parentBlock;
 
 public:
-    CallFunction(Block* m_parentBlock, PointerToRun m_pToRun, MyVariant& m_value) : parentBlock(m_parentBlock) , pToRun(m_pToRun), Op(m_value) {}
+    CallFunction(Block* m_parentBlock, PointerToRun m_pToRun, MyVariant* m_value) : parentBlock(m_parentBlock) , pToRun(m_pToRun), Op(m_value) {}
     void eval()
     {
-        QList<MyVariant> parameters;        
+        QList<MyVariant*> parameters;
         foreach (AbstractExpr* expr, arguments)
         {
             expr->eval();
             parameters.append(expr->value);
         }
 
-        (parentBlock->*pToRun)(&value, &parameters);
+        (parentBlock->*pToRun)(value, &parameters);
 
     }
 
@@ -196,12 +195,12 @@ private:
     Block* parentBlock;
     int ifTrueId, ifFalseId;
 public:
-    IfOp( MyVariant& m_value, Block* m_parentBlock, PointerToRunChild m_pToRunChild, int m_IfTrueId, int m_IfFalseId = -1) : Op(m_value), parentBlock(m_parentBlock) , pToRunChild(m_pToRunChild), ifTrueId(m_IfTrueId), ifFalseId(m_IfFalseId) {}
+    IfOp( MyVariant* m_value, Block* m_parentBlock, PointerToRunChild m_pToRunChild, int m_IfTrueId, int m_IfFalseId = -1) : Op(m_value), parentBlock(m_parentBlock) , pToRunChild(m_pToRunChild), ifTrueId(m_IfTrueId), ifFalseId(m_IfFalseId) {}
 
     void eval()
     {
         left->eval();
-        if (left->value.toInt())
+        if (left->value->toInt())
         {
             (parentBlock->*pToRunChild)(ifTrueId);
         }
@@ -225,14 +224,14 @@ private:
     Block* parentBlock;
     int ifTrueId;
 public:
-    WhileOp(MyVariant& m_value, Block* m_parentBlock, PointerToRunChild m_pToRunChild, int m_IfTrueId) : Op(m_value), parentBlock(m_parentBlock) , pToRunChild(m_pToRunChild), ifTrueId(m_IfTrueId) {}
+    WhileOp(MyVariant* m_value, Block* m_parentBlock, PointerToRunChild m_pToRunChild, int m_IfTrueId) : Op(m_value), parentBlock(m_parentBlock) , pToRunChild(m_pToRunChild), ifTrueId(m_IfTrueId) {}
 
     void eval()
     {
 
         forever {
             left->eval();
-            if (!left->value.toInt()) break;
+            if (!left->value->toInt()) break;
             (parentBlock->*pToRunChild)(ifTrueId);
         }
 
@@ -252,11 +251,11 @@ private:
     Block* parentBlock;
     int ifTrueId;
 public:
-    LoopOp(MyVariant& m_value, Block* m_parentBlock, PointerToRunChild m_pToRunChild, int m_IfTrueId) : Op(m_value), parentBlock(m_parentBlock) , pToRunChild(m_pToRunChild), ifTrueId(m_IfTrueId) {}
+    LoopOp(MyVariant* m_value, Block* m_parentBlock, PointerToRunChild m_pToRunChild, int m_IfTrueId) : Op(m_value), parentBlock(m_parentBlock) , pToRunChild(m_pToRunChild), ifTrueId(m_IfTrueId) {}
     void eval()
     {
         left->eval();
-        int count = left->value.toInt();
+        int count = left->value->toInt();
         std::cout << count << std::endl;
         while (count--) {
             (parentBlock->*pToRunChild)(ifTrueId);
@@ -277,16 +276,16 @@ class InitializerList : public Op
 {
 
 public:
-    InitializerList(MyVariant& m_value) : Op(m_value)
+    InitializerList(MyVariant* m_value) : Op(m_value)
 
     {}
 
     void eval()
     {
-        int size = arguments.size();
+        /*int size = arguments.size();
         /*real_type* array = new real_type[size];
         for (int i=0; i<size; ++i)
-            array[i] = arguments[i]->eval().toRealType();*/
+            array[i] = arguments[i]->eval().toRealType();
         QList<MyVariant*> elements;
         bool isTypesSame = true;
         for (int i=0; i<size; ++i)
@@ -302,7 +301,7 @@ public:
             return;
         }
         value = MyVariant(elements);
-        //return MyVariant(elements);
+        //return MyVariant(elements);*/
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -321,11 +320,11 @@ class DisplayVariable : public Op
 {
 
 public:
-    DisplayVariable(MyVariant& m_value) : Op(m_value) {}
+    DisplayVariable(MyVariant* m_value) : Op(m_value) {}
     void eval()
     {
         if (left!=nullptr) left->eval();
-        value.print();
+        value->print();
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -338,11 +337,11 @@ public:
 class UnaryMinus :public Op
 {
 public:
-    UnaryMinus(MyVariant& m_value) : Op(m_value) {}
+    UnaryMinus(MyVariant* m_value) : Op(m_value) {}
 
     void eval() {
         right->eval();
-        value = -right->value;
+        *value = -*(right->value);
     }
     AbstractExpr* clone(AbstractExpr *m_parent) const override
     {
@@ -354,11 +353,11 @@ public:
 class AddOp : public Op
 {
 public:
-    AddOp(MyVariant& m_value) : Op(m_value) {}
+    AddOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value + right->value;
+        *value = *left->value + *right->value;
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -371,11 +370,11 @@ public:
 class SubstractOp : public Op
 {
 public:
-    SubstractOp(MyVariant& m_value) : Op(m_value) {}
+    SubstractOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value - right->value;
+        *value = *left->value - *right->value;
 
     }
 
@@ -389,11 +388,11 @@ public:
 class MultiplyOp : public Op
 {
 public:
-    MultiplyOp(MyVariant& m_value) : Op(m_value) {}
+    MultiplyOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value * right->value;
+        *value = *left->value * *right->value;
 
     }
 
@@ -407,11 +406,11 @@ public:
 class DivideOp : public Op
 {
 public:
-    DivideOp(MyVariant& m_value) : Op(m_value) {}
+    DivideOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value / right->value;
+        *value = *left->value / *right->value;
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -424,11 +423,11 @@ public:
 class PowerOp : public Op
 {
 public:
-    PowerOp(MyVariant& m_value) : Op(m_value) {}
+    PowerOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value ^ right->value;
+        *value = *left->value ^ *right->value;
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -441,10 +440,10 @@ public:
 class SqrtOp : public Op
 {
 public:
-    SqrtOp(MyVariant& m_value) : Op(m_value) {}
+    SqrtOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         right->eval();
-        value = mySqrt(right->value);
+        *value = mySqrt(*right->value);
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -457,10 +456,10 @@ public:
 class LogOp : public Op
 {
 public:
-    LogOp(MyVariant& m_value) : Op(m_value) {}
+    LogOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         right->eval();
-        value = myLog(right->value);
+        *value = myLog(*right->value);
 
     }
 
@@ -474,10 +473,10 @@ public:
 class AbsOp : public Op
 {
 public:
-    AbsOp(MyVariant& m_value) : Op(m_value) {}
+    AbsOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         right->eval();
-        value = myAbs(right->value);
+        *value = myAbs(*right->value);
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -492,7 +491,7 @@ class AssignOp : public Op
 {
 
 public:
-    AssignOp(MyCache* m_stack, MyVariant& m_value) : Op(m_value)
+    AssignOp(MyCache* m_stack, MyVariant* m_value) : Op(m_value)
     {
         stack = m_stack;
     }
@@ -502,7 +501,7 @@ public:
         value = right->value;
         if (!left->assign(value)) {
             reportError("lvalue of assignment isn't correct");
-            value = MyVariant(VOID);
+            value = nullptr;
         }
     }
 
@@ -517,12 +516,12 @@ class IsEqualOp : public Op
 {
 
 public:
-    IsEqualOp(MyVariant& m_value) : Op(m_value) {}
+    IsEqualOp(MyVariant* m_value) : Op(m_value) {}
 
     void eval() {
         left->eval();
         right->eval();
-        value = left->value == right->value;
+        *value = *left->value == *right->value;
 
     }
 
@@ -536,11 +535,11 @@ public:
 class IsLessOp : public Op
 {
 public:
-    IsLessOp(MyVariant& m_value) : Op(m_value) {}
+    IsLessOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value < right->value;
+        *value = *left->value < *right->value;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
     {
@@ -553,11 +552,11 @@ class IsLessEqualOp : public Op
 {
 
 public:
-    IsLessEqualOp(MyVariant& m_value) : Op(m_value) {}
+    IsLessEqualOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value <= right->value;
+        *value = *left->value <= *right->value;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
     {
@@ -569,11 +568,11 @@ public:
 class IsMoreOp : public Op
 {
 public:
-    IsMoreOp(MyVariant& m_value) : Op(m_value) {}
+    IsMoreOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value > right->value;
+        *value = *left->value > *right->value;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
     {
@@ -585,11 +584,11 @@ public:
 class IsMoreEqualOp : public Op
 {
 public:
-    IsMoreEqualOp(MyVariant& m_value) : Op(m_value) {}
+    IsMoreEqualOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value >= right->value;
+        *value = *left->value >= *right->value;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
     {
@@ -601,11 +600,11 @@ public:
 class IsNotEqualOp : public Op
 {
 public:
-    IsNotEqualOp(MyVariant& m_value) : Op(m_value) {}
+    IsNotEqualOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value != right->value;
+        *value = *left->value != *right->value;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
     {
@@ -617,11 +616,11 @@ public:
 class BoolAndOp : public Op
 {
 public:
-    BoolAndOp(MyVariant& m_value) : Op(m_value) {}
+    BoolAndOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value && right->value;
+        *value = *left->value && *right->value;
 
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -634,11 +633,11 @@ public:
 class BoolOrOp : public Op
 {
 public:
-    BoolOrOp(MyVariant& m_value) : Op(m_value) {}
+    BoolOrOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = left->value || right->value;
+        *value = *left->value || *right->value;
 
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -651,11 +650,11 @@ public:
 class BoolXorOp : public Op
 {
 public:
-    BoolXorOp (MyVariant& m_value) : Op(m_value) {}
+    BoolXorOp (MyVariant* m_value) : Op(m_value) {}
     void eval() {
         left->eval();
         right->eval();
-        value = doXor(left->value, right->value);
+        *value = doXor(*left->value, *right->value);
 
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -668,10 +667,10 @@ public:
 class BoolNotOp : public Op
 {
 public:
-    BoolNotOp(MyVariant& m_value) : Op(m_value) {}
+    BoolNotOp(MyVariant* m_value) : Op(m_value) {}
     void eval() {
         right->eval();
-        value = !right->value;
+        *value = !*right->value;
 
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override

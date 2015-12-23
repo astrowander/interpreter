@@ -213,7 +213,7 @@ public:
         if (root!=nullptr)
         {
             root->eval();
-            return root->value;
+            return *root->value;
         }
         return MyVariant(VOID);
     }

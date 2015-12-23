@@ -13,7 +13,7 @@ bool Parser::parse(QStringList list)
         while (!sp.endOfString()) {
             QString name = sp.getWord();
             if (activeBlock->isVariableDeclared(name)) {
-                currentStatement->createNodeAbove(new DisplayVariable(activeBlock->getVariableByValue(name)));
+                currentStatement->createNodeAbove(new DisplayVariable(activeBlock->getVariableByName(name)));
                 continue;
             }
             std::cout << name.toStdString() << std::endl;
@@ -125,14 +125,14 @@ bool Parser::parse(QStringList list)
 
             currentStatement->setCurrentNodeToRoot();
             stack->push(MyVariant());
-            currentStatement->createNodeAbove(new IfOp(stack->last(), activeBlock, &Block::runChildBlock, ifTrue, ifFalse));
+            currentStatement->createNodeAbove(new IfOp(&stack->last(), activeBlock, &Block::runChildBlock, ifTrue, ifFalse));
             activeBlock->addStatement(currentStatement);
         }
         else
         {
             currentStatement->setCurrentNodeToRoot();
             stack->push(MyVariant());
-            currentStatement->createNodeAbove(new IfOp(stack->last(), activeBlock, &Block::runChildBlock, ifTrue));
+            currentStatement->createNodeAbove(new IfOp(&stack->last(), activeBlock, &Block::runChildBlock, ifTrue));
             activeBlock->addStatement(currentStatement);
             delete currentStatement;
 
@@ -170,7 +170,7 @@ bool Parser::parse(QStringList list)
 
         currentStatement->setCurrentNodeToRoot();
         stack->push(MyVariant());
-        currentStatement->createNodeAbove(new LoopOp(stack->last(), activeBlock, &Block::runChildBlock, ifTrue));
+        currentStatement->createNodeAbove(new LoopOp(&stack->last(), activeBlock, &Block::runChildBlock, ifTrue));
         activeBlock->addStatement(currentStatement);
         delete currentStatement;
 
@@ -220,7 +220,7 @@ bool Parser::parse(QStringList list)
 
         currentStatement->setCurrentNodeToRoot();
         stack->push(MyVariant());
-        currentStatement->createNodeAbove(new WhileOp(stack->last(), activeBlock, &Block::runChildBlock, ifTrue));
+        currentStatement->createNodeAbove(new WhileOp(&stack->last(), activeBlock, &Block::runChildBlock, ifTrue));
         activeBlock->addStatement(currentStatement);
         delete currentStatement;
 
@@ -269,7 +269,7 @@ bool Parser::assign()
     if (!boolExpression()) return false;
     if (sp.lookIs('=')) {
         stack->push(MyVariant(VOID));
-        currentStatement->createNodeAbove(new AssignOp(stack, stack->last()));
+        currentStatement->createNodeAbove(new AssignOp(stack, &stack->last()));
         currentStatement->goUp();
         sp.match('=');
         if(!boolExpression()) return false;
@@ -291,12 +291,12 @@ bool Parser::boolExpression()
         if (sp.lookIs('|')) {
             sp.match('|');
             stack->push(MyVariant());
-            currentStatement->createNodeAbove(new BoolOrOp(stack->last()));
+            currentStatement->createNodeAbove(new BoolOrOp(&stack->last()));
         }
 
         else if (sp.lookIs('~')) {
             stack->push(MyVariant());
-            currentStatement->createNodeAbove(new BoolXorOp(stack->last()));
+            currentStatement->createNodeAbove(new BoolXorOp(&stack->last()));
         }
         else {
             reportExpected("'|' or '~'");
@@ -315,7 +315,7 @@ bool Parser::boolTerm()
     {
         sp.match('&');
         stack->push(MyVariant());
-        currentStatement->createNodeAbove(new BoolAndOp(stack->last()));
+        currentStatement->createNodeAbove(new BoolAndOp(&stack->last()));
         currentStatement->goUp();
         if (!notFactor()) return false;
         currentStatement->goUp();
@@ -329,7 +329,7 @@ bool Parser::notFactor()
     {
         sp.match('!');
         stack->push(MyVariant());
-        currentStatement->createNodeAbove(new BoolNotOp(stack->last()));
+        currentStatement->createNodeAbove(new BoolNotOp(&stack->last()));
     }
     if (!relation()) return false;
     return true;
@@ -345,14 +345,14 @@ bool Parser::relation()
             sp.match('=');
             sp.match('=');
             stack->push(MyVariant());
-            currentStatement->createNodeAbove(new IsEqualOp(stack->last()));
+            currentStatement->createNodeAbove(new IsEqualOp(&stack->last()));
         }
 
         else if (sp.lookIs('!') && sp.nextIs('=')) {
             sp.match('!');
             sp.match('=');
             stack->push(MyVariant());
-            currentStatement->createNodeAbove(new IsNotEqualOp(stack->last()));
+            currentStatement->createNodeAbove(new IsNotEqualOp(&stack->last()));
         }
 
         else if (sp.lookIs('<')) {
@@ -360,11 +360,11 @@ bool Parser::relation()
             if (sp.lookIs('=')) {
                 sp.match('=');
                 stack->push(MyVariant());
-                currentStatement->createNodeAbove(new IsLessEqualOp(stack->last()));
+                currentStatement->createNodeAbove(new IsLessEqualOp(&stack->last()));
             }
             else {
                 stack->push(MyVariant());
-                currentStatement->createNodeAbove(new IsLessOp(stack->last()));
+                currentStatement->createNodeAbove(new IsLessOp(&stack->last()));
             }
         }
 
@@ -373,11 +373,11 @@ bool Parser::relation()
             if (sp.lookIs('=')) {
                 sp.match('=');
                 stack->push(MyVariant());
-                currentStatement->createNodeAbove(new IsMoreEqualOp(stack->last()));
+                currentStatement->createNodeAbove(new IsMoreEqualOp(&stack->last()));
             }
             else {
                 stack->push(MyVariant());
-                currentStatement->createNodeAbove(new IsMoreOp(stack->last()));
+                currentStatement->createNodeAbove(new IsMoreOp(&stack->last()));
             }
         }
 
@@ -414,7 +414,7 @@ bool Parser::add()
 {
     sp.match('+');
     stack->push(MyVariant());
-    currentStatement->createNodeAbove(new AddOp(stack->last()));
+    currentStatement->createNodeAbove(new AddOp(&stack->last()));
     return true;
 }
 
@@ -422,7 +422,7 @@ bool Parser::substract()
 {
     sp.match('-');
     stack->push(MyVariant());
-    currentStatement->createNodeAbove(new SubstractOp(stack->last()));
+    currentStatement->createNodeAbove(new SubstractOp(&stack->last()));
     return true;
 }
 
@@ -452,7 +452,7 @@ bool Parser::multiply()
 {
     if (!sp.match('*')) return false;
     stack->push(MyVariant());
-    currentStatement->createNodeAbove(new MultiplyOp(stack->last()));
+    currentStatement->createNodeAbove(new MultiplyOp(&stack->last()));
     return true;
 }
 
@@ -460,7 +460,7 @@ bool Parser::divide()
 {
     if (!sp.match('/')) return false;
     stack->push(MyVariant());
-    currentStatement->createNodeAbove(new DivideOp(stack->last()));
+    currentStatement->createNodeAbove(new DivideOp(&stack->last()));
     return true;
 }
 
@@ -472,7 +472,7 @@ bool Parser::powerFactor()
     while (sp.lookIs('^')) {
         sp.match('^');
         stack->push(MyVariant());
-        currentStatement->createNodeAbove(new PowerOp(stack->last()));
+        currentStatement->createNodeAbove(new PowerOp(&stack->last()));
         currentStatement->goUp();
         if (!factor()) return false;
         currentStatement->goUp();
@@ -485,7 +485,7 @@ bool Parser::signedFactor()
     if (sp.lookIs('-')) {
             sp.match('-');
             stack->push(MyVariant());
-            currentStatement->createRightChild(new UnaryMinus(stack->last()));
+            currentStatement->createRightChild(new UnaryMinus(&stack->last()));
     }
     if (!powerFactor()) return false;
     return true;
@@ -511,7 +511,7 @@ bool Parser::factor()
     {
         sp.match('{');
         stack->push(MyVariant());
-        currentStatement->createRightChild(new InitializerList((stack->last())));
+        currentStatement->createRightChild(new InitializerList((&stack->last())));
         while (!sp.lookIs('}'))
         {
             Statement* buf = new Statement;
@@ -543,7 +543,7 @@ bool Parser::factor()
         real_type* v = new real_type(tempReal);
         sp.skipSpaces();
         stack->push(MyVariant(v));
-        currentStatement->createRightChild(new Literal(stack->last()));
+        currentStatement->createRightChild(new Literal(&stack->last()));
         delete v;
         return true;
    }
@@ -552,7 +552,7 @@ bool Parser::factor()
    int* v = new int(tempReal);
    sp.skipSpaces();
    stack->push((MyVariant(v)));
-   currentStatement->createRightChild(new Literal(stack->last()));
+   currentStatement->createRightChild(new Literal(&stack->last()));
    delete v;
    return true;
 }
@@ -566,15 +566,15 @@ bool Parser::ident()
         {
         case 0: //abs
             stack->push(MyVariant());
-            currentStatement->createRightChild(new AbsOp(stack->last()));
+            currentStatement->createRightChild(new AbsOp(&stack->last()));
             break;
         case 1: //log
             stack->push(MyVariant());
-            currentStatement->createRightChild(new LogOp(stack->last()));
+            currentStatement->createRightChild(new LogOp(&stack->last()));
             break;
         case 2: //sqrt
             stack->push(MyVariant());
-            currentStatement->createRightChild(new SqrtOp(stack->last()));
+            currentStatement->createRightChild(new SqrtOp(&stack->last()));
             break;
         }
 
@@ -591,7 +591,7 @@ bool Parser::ident()
 
             stack->push(MyVariant());
             Block* called = seeingBlock->getFunctionByName(name);
-            CallFunction* callFunction = new CallFunction(called, &Block::run, stack->last());
+            CallFunction* callFunction = new CallFunction(called, &Block::run, &stack->last());
             currentStatement->createRightChild(callFunction);
 
             while (!sp.lookIs(')'))
@@ -615,12 +615,12 @@ bool Parser::ident()
 
         if (seeingBlock->isVariableDeclared(name)) {
             if (!sp.lookIs('[')) {
-                currentStatement->createRightChild(new Variable(seeingBlock->getVariableByValue(name)));
+                currentStatement->createRightChild(new Variable(seeingBlock->getVariableByName(name)));
                 return true;
             }
 
             sp.match('[');
-            currentStatement->createRightChild(new ArrayElement(seeingBlock->getVariableByValue(name)));
+            currentStatement->createRightChild(new ArrayElement(seeingBlock->getVariableByName(name)));
 
             if (!assign()) return false;
             currentStatement->goUp();

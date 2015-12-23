@@ -12,7 +12,9 @@ private:
     static int number;
     int m_id;
     Block* parent;
-    QVector<Statement*> statements;
+    //QVector<Statement*> statements;
+    Statement* statements[1024];
+    int nStatements;
     Statement* activeStatement;
 
     QList<QString> incomingParameters;
@@ -31,6 +33,7 @@ public:
     Block(Block* m_parent) : parent (m_parent)
     {
         m_id = number++;
+        nStatements=0;
         resultPtr = nullptr;
     }
 
@@ -48,6 +51,7 @@ public:
         m_id = number++;
         variablesMap.insert("result", MyVariant(new int(0), -1));
         resultPtr = &variablesMap["result"];
+        nStatements=0;
     }
 
     bool addStatement(Statement* m_statement)
@@ -55,7 +59,8 @@ public:
         Statement* statement = new Statement;
         *statement=*m_statement;
 
-        statements.append(statement);        
+        //statements.append(statement);
+        statements[nStatements++] = statement;
     }
 
     bool isFunctionDeclared(const QString& ss)
@@ -92,9 +97,9 @@ public:
         return childBlocksMap[n];
     }
 
-    MyVariant& getVariableByValue(const QString& ss)
+    MyVariant* getVariableByName(const QString& ss)
     {
-       return variablesMap[ss];
+       return &variablesMap[ss];
     }
 
     void addFunction(const QString& name, const QList<QString>& parameters)
@@ -162,7 +167,7 @@ public:
         childBlocksMap[id]->run();
     }
 
-    void run(MyVariant* result = nullptr, QList<MyVariant> *parameters = nullptr)
+    void run(MyVariant* result = nullptr, QList<MyVariant*> *parameters = nullptr)
     {
         if (parameters != nullptr)
         {
@@ -175,13 +180,13 @@ public:
 
             for(int i=0; i<parameters->size(); ++i)
             {
-                variablesMap[incomingParameters[i]] = (*parameters).at(i);
+                variablesMap[incomingParameters[i]] = *(*parameters).at(i);
             }
         }
 
-        foreach (Statement* statement, statements)
+        for (int i=0; i<nStatements; ++i)
         {
-            statement->eval();
+            statements[i]->eval();
         }
 
         if (resultPtr!=nullptr)
@@ -190,8 +195,8 @@ public:
 
     void runLast(MyVariant* result)
     {
-        if (!statements.isEmpty())
-          *result = statements.last()->eval();
+        if (nStatements!=0)
+          *result = statements[nStatements-1]->eval();
     }
 
     friend int getLevel(Block* block);
@@ -203,7 +208,7 @@ public:
 
     int howManyStatements()
     {
-        return statements.size();
+        return nStatements;
     }
 };
 
