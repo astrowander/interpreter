@@ -13,7 +13,7 @@ private:
     Block mainBlock;
 
     Scanner scanner;
-    Parser parser;
+    Parser* parser;
     Preprocessor preprocessor;
 
     QStringList buffer;
@@ -23,9 +23,9 @@ private:
 
 public:
 
-    Interpreter() : inStream(stdin), parser(&mainBlock, this, &Interpreter::getStringList, &Interpreter::addToBuffer, &myVariantStack)
+    Interpreter() : inStream(stdin)
     {
-
+       parser = new Parser(&mainBlock, this, &Interpreter::getStringList, &Interpreter::addToBuffer, &myVariantStack);
     }
 
     ~Interpreter()

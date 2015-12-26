@@ -15,9 +15,9 @@ void Interpreter::run()
         else if (code==2)
             break;
 
-        if (!parser.parse(toParseList)) continue;
+        if (!parser->parse(toParseList)) continue;
 
-        if (parser.getActiveBlock()==&mainBlock) {
+        if (parser->getActiveBlock()==&mainBlock) {
 
             if (nOfStatements==mainBlock.howManyStatements()) {
                 continue;
@@ -27,9 +27,9 @@ void Interpreter::run()
             QTime timer;
             timer.start();
 
-            mainBlock.runLast(&result);
-            if(parser.doOutput())
-                result.print();            
+            if (!mainBlock.runLast(&result)) continue;
+            if(parser->doOutput())
+               result.print();
             std::cout << "Time elapsed: " << timer.elapsed() << std::endl;
         }
     }
@@ -41,7 +41,7 @@ int Interpreter::getStringList(QStringList& stringList)
 
    if (buffer.isEmpty()) {
        std::cout << ">>> ";
-       for (int i=0; i < getLevel(parser.getActiveBlock()); ++i)
+       for (int i=0; i < getLevel(parser->getActiveBlock()); ++i)
            std::cout << "    ";
        currentString = inStream.readLine();
    }

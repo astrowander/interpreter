@@ -13,7 +13,7 @@
 #include <QStringList>
 #include <QVector>
 
-typedef long double real_type;
+typedef double real_type;
 
 void reportError(const QString &ss);
 void reportRuntimeError(const QString& ss);

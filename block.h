@@ -49,7 +49,7 @@ public:
     void init()
     {
         m_id = number++;
-        variablesMap.insert("result", MyVariant(new int(0), -1));
+        variablesMap.insert("result", MyVariant(int(0)));
         resultPtr = &variablesMap["result"];
         nStatements=0;
     }
@@ -137,9 +137,21 @@ public:
         functionsMap.remove(name);
     }
 
-    void addVariable(const QString& ss, DataType dataType = REAL, int m_size = -1, real_type* data = new real_type(0))
+    void addVariable(const QString& ss, DataType dataType = REAL, int m_size = -1, real_type data = 0)
     {
-        variablesMap.insert(ss, MyVariant(data, m_size));
+        switch (dataType)
+        {
+        case REAL:
+            variablesMap.insert(ss, MyVariant(data));
+            break;
+
+        case INTEGER:
+            variablesMap.insert(ss, MyVariant(int(data)));
+            break;
+
+        default:
+            variablesMap.insert(ss, MyVariant(VOID));
+        }
     }
 
     void addIncomingParameter(const QString& ss)
@@ -193,10 +205,12 @@ public:
             *result = *resultPtr;
     }
 
-    void runLast(MyVariant* result)
+    bool runLast(MyVariant* result)
     {
         if (nStatements!=0)
-          *result = statements[nStatements-1]->eval();
+          return statements[nStatements-1]->eval(result);
+
+        return false;
     }
 
     friend int getLevel(Block* block);

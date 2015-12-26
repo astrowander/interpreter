@@ -8,617 +8,378 @@ class MyVariant
 {
 private:
     DataType dataType;
-    void* data;
+    int intData;
+    real_type realData;
 
-    QList<MyVariant*> elements;
+    MyVariant* elements[1024];  
     int size;
     bool v_isArray;
+    int dimension;
 
 public:
-    MyVariant(DataType m_dataType=VOID) : dataType(m_dataType), data(nullptr), size(-1), v_isArray(false) {}
-    MyVariant(real_type* m_data, int m_size=-1);
-    MyVariant(int* m_data, int m_size=-1);
-    MyVariant(QList<MyVariant*> &m_elements) : data(nullptr), dataType(VOID), elements(m_elements), size(m_elements.size()), v_isArray(true)
-    {
-        if (!elements.isEmpty())
-            dataType = elements.at(0)->getDataType();
-    }
+    MyVariant(DataType m_dataType=VOID) : dataType(m_dataType), intData(0), realData(0), size(-1), v_isArray(false) {}
+    MyVariant(real_type m_data);
+    MyVariant(int m_data);
+    MyVariant(MyVariant* m_elements[], int m_size);
     MyVariant (MyVariant const& other);
     MyVariant& operator=(const MyVariant& other);
     ~MyVariant();
 
-    real_type toRealType() const;
-    int toInt() const;
+    inline real_type toRealType() const
+    {
+        return realData;
+    }
+    inline int toInt() const
+    {
+        return intData;
+    }
     std::valarray<real_type> toRealValarray() const;
 
-    DataType getDataType() const;
-
-    MyVariant castTo(DataType otherDataType) const
+    inline DataType getDataType() const
     {
-        MyVariant result;
-        result.size = size;        
-        result.v_isArray = v_isArray;
-        result.dataType = otherDataType;
+        return dataType;
+    }
 
-        if (v_isArray)
+    friend void castTo(MyVariant* m_v1, DataType otherDataType)
+    {
+        //m_v1->dataType = otherDataType;
+
+        if (m_v1->v_isArray)
         {
-            foreach(MyVariant* element, elements)
+            for(int i=0; i<m_v1->size; ++i)
             {
-                result.elements.append(new MyVariant(element->castTo(otherDataType)));
+                castTo(m_v1->elements[i], otherDataType);
             }
-            return result;
+            return;
         }
 
         switch (otherDataType)
         {
         case REAL:
-            result.data = new real_type;
-
-            switch (dataType)
+            switch (m_v1->dataType)
             {
             case INTEGER:
-                * (real_type*) result.data = (real_type) *(int*) data;
-                return result;
+                m_v1->realData = real_type(m_v1->intData);
+                m_v1->dataType = REAL;
+                return;
             default:
                 reportError("Type casting error");
-                delete result.data;
-                return MyVariant(TYPEERROR);
+                m_v1->dataType = TYPEERROR;
+                return;
             }
         case INTEGER:
-            result.data = new int;
-
-            switch (dataType)
+            switch (m_v1->dataType)
             {
             case REAL:
-                * (real_type*) result.data = (int) *(real_type*) data;
-                return result;
+                m_v1->intData = (int) m_v1->realData;
+                m_v1->dataType = INTEGER;
+                return;
             default:
                 reportError("Type casting error");
-                delete result.data;
-                return MyVariant(TYPEERROR);
+                m_v1->dataType = TYPEERROR;
+                return;
             }
         default:
             reportError("Type casting error");
-            return MyVariant(TYPEERROR);
-        }
-    }
-
-    static QPair<MyVariant, MyVariant> autoCast(const MyVariant& v1, const MyVariant& v2)
-    {
-        if (v1.dataType == REAL && v2.dataType == REAL || v1.dataType ==INTEGER && v2.dataType == INTEGER)
-            return QPair<MyVariant, MyVariant>(v1,v2);
-
-        if (v1.dataType == REAL && v2.dataType ==INTEGER)
-            return QPair<MyVariant, MyVariant> (v1,v2.castTo(REAL));
-
-        if (v1.dataType ==INTEGER && v2.dataType == REAL)
-            return QPair<MyVariant, MyVariant> (v1.castTo(REAL), v2);
-
-        return QPair<MyVariant, MyVariant>();
-    }
-
-    friend MyVariant operator== (const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-        MyVariant& v1 = operands.first;
-        MyVariant& v2 = operands.second;
-
-        if (m_v1.v_isArray && m_v2.v_isArray) {
-
-            if (m_v1.size != m_v2.size)
-                return MyVariant(TYPEERROR);
-
-            bool result = true;
-            for (int i=0; i<m_v1.size; ++i) {
-                result &= (m_v1.elements.at(i) == m_v1.elements.at(i));
-            }
-            return MyVariant(new int(result));
-        }
-
-        switch (m_v1.dataType)
-        {
-        case REAL:
-            return MyVariant(new int(v1.toRealType() == v2.toRealType()));
-        case INTEGER:
-            return MyVariant(new int(v1.toInt() == v2.toInt()));
-        default:
-            return MyVariant();
-        }
-    }
-
-    friend MyVariant operator< (const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-        MyVariant& v1 = operands.first;
-        MyVariant& v2 = operands.second;
-
-        if (m_v1.v_isArray || m_v2.v_isArray) {
-           reportError("Arrays could be compared only by ==");
-           return MyVariant(TYPEERROR);
-        }
-
-        switch (m_v1.dataType)
-        {
-        case REAL:
-            return MyVariant(new int(v1.toRealType() < v2.toRealType()));
-        case INTEGER:
-            return MyVariant(new int(v1.toInt() < v2.toInt()));
-        }
-    }
-
-    friend MyVariant operator> (const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-        MyVariant& v1 = operands.first;
-        MyVariant& v2 = operands.second;
-
-        if (m_v1.v_isArray || m_v2.v_isArray) {
-            reportError("Arrays could be compared only by ==");
-            return MyVariant(TYPEERROR);
-        }
-
-        switch (m_v1.dataType)
-        {
-        case REAL:
-            return MyVariant(new int(v1.toRealType() > v2.toRealType()));
-        case INTEGER:
-            return MyVariant(new int(v1.toInt() > v2.toInt()));
-        }
-    }
-
-    friend MyVariant operator<= (const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-        MyVariant& v1 = operands.first;
-        MyVariant& v2 = operands.second;
-
-        if (m_v1.v_isArray || m_v2.v_isArray) {
-            reportError("Arrays could be compared only by ==");
-            return MyVariant(TYPEERROR);
-        }
-
-        switch (m_v1.dataType)
-        {
-        case REAL:
-            return MyVariant(new int(v1.toRealType() <= v2.toRealType()));
-        case INTEGER:
-            return MyVariant(new int(v1.toInt() <= v2.toInt()));
-        }
-    }
-
-    friend MyVariant operator>= (const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-        MyVariant& v1 = operands.first;
-        MyVariant& v2 = operands.second;
-
-        if (m_v1.v_isArray || m_v2.v_isArray) {
-            reportError("Arrays could be compared only by ==");
-            return MyVariant(TYPEERROR);
-        }
-
-        switch (m_v1.dataType)
-        {
-        case REAL:
-            return MyVariant(new int(v1.toRealType() >= v2.toRealType()));
-        case INTEGER:
-            return MyVariant(new int(v1.toInt() >= v2.toInt()));
-        }
-    }
-
-    friend MyVariant operator !(const MyVariant& m_v1)
-    {
-        if (!m_v1.dataType==INTEGER || m_v1.v_isArray) {
-            return MyVariant(TYPEERROR);
-        }
-        return MyVariant(new int(!m_v1.toInt()));
-    }
-
-    friend MyVariant operator!= (const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        return !(m_v1 == m_v2);
-    }
-
-    friend MyVariant operator &&(const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        if (!(m_v1.dataType==INTEGER) || m_v1.v_isArray || !(m_v2.dataType==INTEGER) || m_v2.v_isArray) {
-            reportError("Operands must be integer");
-            return MyVariant(TYPEERROR);
-        }
-        return MyVariant(new int(m_v1.toInt() && m_v2.toInt()));
-    }
-
-    friend MyVariant operator ||(const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        if (!(m_v1.dataType==INTEGER) || m_v1.v_isArray || !(m_v2.dataType==INTEGER) || m_v2.v_isArray) {
-            reportError("Operands must be integer");
-            return MyVariant(TYPEERROR);
-        }
-        return MyVariant(new int(m_v1.toInt() || m_v2.toInt()));
-    }
-
-    //XOR
-    friend MyVariant doXor(const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        if (!(m_v1.dataType==INTEGER) || m_v1.v_isArray || !(m_v2.dataType==INTEGER) || m_v2.v_isArray) {
-            reportError("Operands must be integer");
-            return MyVariant(TYPEERROR);
-        }
-        return MyVariant(new int(!m_v1.toInt() != !m_v2.toInt()));
-    }
-
-    friend MyVariant operator+(const MyVariant& v1, const MyVariant& v2)
-    {
-       //QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-       //MyVariant& v1 = operands.first;
-       //MyVariant& v2 = operands.second;
-
-       if (v1.dataType==REAL) {
-
-            if (!v1.v_isArray && !v2.v_isArray)
-                return MyVariant(new real_type(v1.toRealType() + v2.toRealType()));
-
-            if (v1.v_isArray && v2.v_isArray) {
-                real_type* result = new real_type[v1.size];
-                for (int i = 0; i < v1.size; ++i) {
-                    result[i]= v1.elements.at(i)->toRealType() + v2.elements.at(i)->toRealType();
-                }
-                return MyVariant(result, v1.size);
-
-            }
-        }
-
-        if (v1.dataType==INTEGER) {
-            if (!v1.v_isArray && !v2.v_isArray)
-                return MyVariant(new int(v1.toInt() + v2.toInt()));
-
-            if (v1.v_isArray && v2.v_isArray) {
-                real_type* result = new real_type[v1.size];
-                for (int i = 0; i < v1.size; ++i) {
-                    result[i]= v1.elements.at(i)->toInt() + v2.elements.at(i)->toInt();
-                }
-                return MyVariant(result, v1.size);
-
-            }
-        }
-        return MyVariant(TYPEERROR);
-    }
-
-    friend MyVariant operator-(const MyVariant& m_v1)
-    {
-        if (m_v1.v_isArray)
-        {
-            QList<MyVariant*> tempElements;
-            for (int i=0; i<m_v1.size; ++i) {
-                tempElements.append(new MyVariant(-(*m_v1.elements.at(i))));
-            }
-            return MyVariant(tempElements);
-        }
-
-        switch (m_v1.dataType)
-        {
-        case REAL:
-            return MyVariant(new real_type( -m_v1.toRealType()));
-        case INTEGER:
-            return MyVariant(new int(-m_v1.toInt()));
-        }
-
-        return MyVariant(TYPEERROR);
-    }
-
-    friend MyVariant operator-(const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-        MyVariant& v1 = operands.first;
-        MyVariant& v2 = operands.second;
-
-        if (v1.dataType==REAL) {
-
-            if (!v1.v_isArray && !v2.v_isArray)
-                return MyVariant(new real_type(v1.toRealType() - v2.toRealType()));
-
-            if (v1.v_isArray && v2.v_isArray) {
-                real_type* result = new real_type[v1.size];
-                for (int i = 0; i < v1.size; ++i) {
-                    result[i]= v1.elements.at(i)->toRealType() - v2.elements.at(i)->toRealType();
-                }
-                return MyVariant(result, v1.size);
-
-            }
-        }
-
-        if (v1.dataType==INTEGER) {
-            if (!v1.v_isArray && !v2.v_isArray)
-                return MyVariant(new int(v1.toInt() - v2.toInt()));
-
-            if (v1.v_isArray && v2.v_isArray) {
-                real_type* result = new real_type[v1.size];
-                for (int i = 0; i < v1.size; ++i) {
-                    result[i]= v1.elements.at(i)->toInt() - v2.elements.at(i)->toInt();
-                }
-                return MyVariant(result, v1.size);
-
-            }
-        }
-        return MyVariant(TYPEERROR);
-    }
-
-    friend MyVariant operator*(const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-        MyVariant& v1 = operands.first;
-        MyVariant& v2 = operands.second;
-
-        if (v1.dataType==REAL) {
-            if (!v1.v_isArray && !v2.v_isArray)
-                return MyVariant(new real_type(v1.toRealType() * v2.toRealType()));
-
-            if (v1.v_isArray && !v2.v_isArray) {
-                real_type* result = new real_type[v1.size];
-                for (int i = 0; i < v1.size; ++i) {
-                    result[i]=v1.elements.at(i)->toRealType() * v2.toRealType();
-                }
-                return MyVariant(result,v1.size);
-            }
-
-            if (!v1.v_isArray && v2.v_isArray) {
-                real_type* result = new real_type[v2.size];
-                for (int i = 0; i < v2.size; ++i) {
-                    result[i]=v1.toRealType() * v2.elements.at(i)->toRealType();
-                }
-                return MyVariant(result,v2.size);
-            }
-        }
-
-        if (v1.dataType==INTEGER) {
-            if (!v1.v_isArray && !v2.v_isArray)
-                return MyVariant(new int(v1.toInt() * v2.toInt()));
-
-            if (v1.v_isArray && !v2.v_isArray) {
-                int* result = new int[v1.size];
-                for (int i = 0; i < v1.size; ++i) {
-                    result[i]=v1.elements.at(i)->toInt() * v2.toInt();
-                }
-                return MyVariant(result,v1.size);
-            }
-
-            if (!v1.v_isArray && v2.v_isArray) {
-                int* result = new int[v2.size];
-                for (int i = 0; i < v2.size; ++i) {
-                    result[i]=v1.toInt() * v2.elements.at(i)->toInt();
-                }
-                return MyVariant(result,v2.size);
-            }
-        }
-        return MyVariant(TYPEERROR);
-    }
-
-    friend MyVariant operator/(const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-        MyVariant& v1 = operands.first;
-        MyVariant& v2 = operands.second;
-
-        if (v1.dataType==REAL) {
-            if (!v1.v_isArray && !v2.v_isArray)
-                return MyVariant(new real_type(v1.toRealType() / v2.toRealType()));
-
-            if (v1.v_isArray && !v2.v_isArray) {
-                real_type* result = new real_type[v1.size];
-                for (int i = 0; i < v1.size; ++i) {
-                    result[i]=v1.elements.at(i)->toRealType() / v2.toRealType();
-                }
-                return MyVariant(result,v1.size);
-            }
-         }
-
-        if (v1.dataType==INTEGER) {
-            if (!v1.v_isArray && !v2.v_isArray)
-                return MyVariant(new int(v1.toInt() / v2.toInt()));
-
-            if (v1.v_isArray && !v2.v_isArray) {
-                int* result = new int[v1.size];
-                for (int i = 0; i < v1.size; ++i) {
-                    result[i]=v1.elements.at(i)->toInt() / v2.toInt();
-                }
-                return MyVariant(result,v1.size);
-            }
-         }
-         return MyVariant(TYPEERROR);
-    }
-
-    friend MyVariant operator^(const MyVariant& m_v1, const MyVariant& m_v2)
-    {
-        QPair<MyVariant, MyVariant> operands = autoCast(m_v1,m_v2);
-        MyVariant& v1 = operands.first;
-        MyVariant& v2 = operands.second;
-
-        if (v1.dataType==REAL) {
-            if (!v1.v_isArray && !v2.v_isArray)
-                return MyVariant(new real_type(pow(v1.toRealType(),  v2.toRealType())));
-        }
-
-        if (v1.dataType==INTEGER) {
-            if (!v1.v_isArray && !v2.v_isArray)
-                return MyVariant(new int(pow(v1.toInt(),  v2.toInt())));
-        }
-        return MyVariant(TYPEERROR);
-    }
-
-    friend MyVariant mySqrt(const MyVariant& v1)
-    {
-        if (v1.dataType==REAL)
-        {
-            if (!v1.v_isArray)
-                return MyVariant(new real_type(sqrt(v1.toRealType())));
-            //else
-            real_type* result = new real_type[v1.size];
-            for (int i = 0; i < v1.size; ++i) {
-                result[i]=sqrt(v1.elements.at(i)->toRealType());
-            }
-            return MyVariant(result,v1.size);
-        }
-
-        if (v1.dataType==INTEGER)
-        {
-            if (!v1.v_isArray)
-                return MyVariant(new int(sqrt(v1.toInt())));
-            //else
-            int* result = new int[v1.size];
-            for (int i = 0; i < v1.size; ++i) {
-                result[i]=sqrt(v1.elements.at(i)->toInt());
-            }
-            return MyVariant(result,v1.size);
-        }
-        return MyVariant(TYPEERROR);
-    }
-
-    friend MyVariant myLog(const MyVariant&v1)
-    {
-        if (v1.dataType==REAL)
-        {
-            if (!v1.v_isArray)
-                return MyVariant(new real_type(log(v1.toRealType())));
-            //else
-            real_type* result = new real_type[v1.size];
-            for (int i = 0; i < v1.size; ++i) {
-                result[i]=log(v1.elements.at(i)->toRealType());
-            }
-            return MyVariant(result,v1.size);
-        }
-
-        if (v1.dataType==INTEGER)
-        {
-            if (!v1.v_isArray)
-                return MyVariant(new int(log(v1.toInt())));
-            //else
-            int* result = new int[v1.size];
-            for (int i = 0; i < v1.size; ++i) {
-                result[i]=log(v1.elements.at(i)->toInt());
-            }
-            return MyVariant(result,v1.size);
-        }
-        return MyVariant(TYPEERROR);
-    }
-
-    friend MyVariant myAbs(const MyVariant&v1)
-    {
-        if (v1.dataType==REAL)
-        {
-            if (!v1.v_isArray)
-                return MyVariant(new real_type(fabs(v1.toRealType())));
-            //else
-            real_type* result = new real_type[v1.size];
-            for (int i = 0; i < v1.size; ++i) {
-                result[i]=fabs(v1.elements.at(i)->toRealType());
-            }
-            return MyVariant(result,v1.size);
-        }
-
-        if (v1.dataType==INTEGER)
-        {
-            if (!v1.v_isArray)
-                return MyVariant(new int(abs(v1.toInt())));
-            //else
-            int* result = new int[v1.size];
-            for (int i = 0; i < v1.size; ++i) {
-                result[i]=abs(v1.elements.at(i)->toInt());
-            }
-            return MyVariant(result,v1.size);
-        }
-        return MyVariant(TYPEERROR);
-    }    
-
-    void print() const
-    {
-        QString result = "\n= ";
-
-        switch (dataType)
-        {
-        case REAL:
-            if (!v_isArray) {
-                result += QString::number(double( *(real_type*)data) );
-                break;
-            }
-
-            result += "{";
-            for (int i=0; i<size; ++i) {
-                result += QString::number(double(elements.at(i)->toRealType()));
-                result += ", ";
-            }
-            result.chop(2);
-            result += "}";
-            break;
-
-        case INTEGER:
-            if (!v_isArray) {
-                result += QString::number( *(int*) data);
-                break;
-            }
-
-            result += "{";
-            for (int i=0; i<size; ++i) {
-                result += QString::number(elements.at(i)->toInt());
-                result += ", ";
-            }
-            result.chop(2);
-            result += "}";
-            break;
-
-        case TYPEERROR:
-            result += "Type mismatch error";
-            break;
-
-        default: //VOID
+            m_v1->dataType = TYPEERROR;
             return;
         }
-        result += "\n\n";
-        std::cout << result.toStdString();
     }
 
-    int getSize() const
+    friend void autoCast(MyVariant* v1, MyVariant* v2)
+    {
+        if (v1->dataType == REAL && v2->dataType == REAL || v1->dataType ==INTEGER && v2->dataType == INTEGER)
+            return;
+
+        if (v1->dataType == REAL && v2->dataType ==INTEGER) {
+            castTo(v2, REAL);
+            return;
+        }
+        if (v1->dataType ==INTEGER && v2->dataType == REAL)
+        {
+            castTo(v1, REAL);
+            return;
+        }
+        v1->dataType = v2->dataType = TYPEERROR;
+    }
+
+    //friend void isEqual(MyVariant& result, const MyVariant& v1, const MyVariant& v2);
+
+    friend MyVariant operator== (const MyVariant& m_v1, const MyVariant& m_v2);
+
+    friend MyVariant operator< (const MyVariant& m_v1, const MyVariant& m_v2);
+
+    friend MyVariant operator> (const MyVariant& m_v1, const MyVariant& m_v2);
+
+    friend MyVariant operator<= (const MyVariant& m_v1, const MyVariant& m_v2);
+
+    friend MyVariant operator >= (const MyVariant& m_v1, const MyVariant& m_v2);
+
+    friend MyVariant operator !(const MyVariant& m_v1);
+
+    friend MyVariant operator!= (const MyVariant& m_v1, const MyVariant& m_v2);
+
+    friend MyVariant operator &&(const MyVariant& m_v1, const MyVariant& m_v2);
+
+    friend MyVariant operator ||(const MyVariant& m_v1, const MyVariant& m_v2);
+
+    //XOR
+    friend MyVariant doXor(const MyVariant& m_v1, const MyVariant& m_v2);
+
+   // friend MyVariant& operator+(MyVariant& v1,  MyVariant& v2);
+
+    friend MyVariant operator-(const MyVariant& m_v1);
+
+    friend MyVariant operator-(const MyVariant& m_v1, const MyVariant& m_v2);
+
+    friend MyVariant operator*(const MyVariant& m_v1, const MyVariant& m_v2);
+
+    friend MyVariant operator/(const MyVariant& m_v1, const MyVariant& m_v2);
+
+    friend MyVariant operator^(const MyVariant& m_v1, const MyVariant& m_v2);
+
+    //friend MyVariant mySqrt(const MyVariant& v1);
+
+    friend MyVariant myLog(const MyVariant&v1);
+
+    friend MyVariant myAbs(const MyVariant&v1);
+
+    friend bool add(MyVariant* result, MyVariant* v1, MyVariant* v2)
+    {
+        autoCast(v1,v2);
+        result->dataType = v1->dataType;
+        if (!v1->v_isArray && !v2->v_isArray) {
+            result->v_isArray = false;
+
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->realData = v1->realData + v2->realData;
+                break;
+            case INTEGER:
+                result->intData = v1->intData + v2->intData;
+                break;
+            default:
+                result->dataType = TYPEERROR;
+            }
+            return true;
+        }
+
+        if (v1->v_isArray && v2->v_isArray) {
+            result->v_isArray = true;
+            if (v1->size!=v2->size) {
+                reportError("Dimensions of array does not match");
+                return false;
+            }
+            for (int i=0; i< std::min(v1->size, v2->size); ++i) {
+                if (!add(result->elements[i], v1->elements[i], v2->elements[i])) return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    friend bool substract(MyVariant* result, MyVariant* v1, MyVariant* v2)
+    {
+        autoCast(v1,v2);
+        result->dataType = v1->dataType;
+        if (!v1->v_isArray && !v2->v_isArray) {
+            result->v_isArray = false;
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->realData = v1->realData - v2->realData;
+                break;
+            case INTEGER:
+                result->intData = v1->intData - v2->intData;
+                break;
+            default:
+                result->dataType = TYPEERROR;
+            }
+            return true;
+        }
+
+        if (v1->v_isArray && v2->v_isArray) {
+            result->v_isArray = true;
+            if (v1->size!=v2->size) {
+                reportError("Dimensions of array does not match");
+                return false;
+            }
+            for (int i=0; i< std::min(v1->size, v2->size); ++i) {
+                if (!substract(result->elements[i], v1->elements[i], v2->elements[i])) return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    friend bool multiply(MyVariant* result, MyVariant* v1, MyVariant* v2)
+    {
+        autoCast(v1,v2);
+        result->dataType = v1->dataType;
+        if (!v1->v_isArray && !v2->v_isArray) {
+            result->v_isArray = false;
+            result->dataType = v1->dataType;
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->realData = v1->realData * v2->realData;
+                break;
+            case INTEGER:
+                result->intData = v1->intData * v2->intData;
+                break;
+            default:
+                result->dataType = TYPEERROR;
+            }
+            return true;
+        }
+
+        if (!v1->v_isArray && v2->v_isArray) {
+            result->v_isArray = true;
+
+            for (int i=0; i< v2->size; ++i) {
+                if (!multiply(result->elements[i], v1, v2->elements[i])) return false;
+            }
+            return true;
+        }
+
+        if (v1->v_isArray && !v2->v_isArray) {
+            result->v_isArray = true;
+            for (int i=0; i< v1->size; ++i) {
+                if (!multiply(result->elements[i], v1->elements[i], v2)) return false;
+            }
+            return true;
+        }
+        reportError("Type mysmatch");
+        return false;
+    }
+
+    friend bool divide(MyVariant* result, MyVariant* v1, MyVariant* v2)
+    {
+        autoCast(v1,v2);
+        result->dataType = v1->dataType;
+        if (!v1->v_isArray && !v2->v_isArray) {
+            result->v_isArray = false;
+
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->realData = v1->realData / v2->realData;
+                break;
+            case INTEGER:
+                result->intData = v1->intData / v2->intData;
+                break;
+            default:
+                result->dataType = TYPEERROR;
+            }
+            return true;
+        }
+
+        if (v1->v_isArray && !v2->v_isArray) {
+            result->v_isArray = true;
+            for (int i=0; i< v1->size; ++i) {
+                if (!divide(result->elements[i], v1->elements[i], v2)) return false;
+            }
+            return true;
+        }
+        reportError("Type mysmatch");
+        return false;
+    }
+
+    friend bool power(MyVariant* result, MyVariant* v1, MyVariant* v2)
+    {
+        result->dataType = v1->dataType;
+        autoCast(v1,v2);
+        if (!v1->v_isArray && !v2->v_isArray) {
+            result->v_isArray = false;
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->realData = pow(v1->realData, v2->realData);
+                break;
+            case INTEGER:
+                result->intData = pow(v1->intData, v2->intData);
+                break;
+            default:
+                result->dataType = TYPEERROR;
+            }
+            return true;
+        }
+        reportError("Type mysmatch");
+        return false;
+    }
+
+    friend bool mySqrt(MyVariant* result, MyVariant* v1)
+    {
+        result->dataType = v1->dataType;
+        if (!v1->isArray()) {
+            result->v_isArray = false;
+
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->realData = sqrt(v1->realData);
+                break;
+            case INTEGER:
+                result->intData = sqrt(v1->intData);
+                break;
+            default:
+                result->dataType = TYPEERROR;
+                reportError("Type mysmatch");
+                return false;
+            }
+            return true;
+        }
+        //else
+        result->v_isArray = true;
+
+        for (int i=0; i<v1->size; ++i) {
+            if (!mySqrt(result->elements[i], v1->elements[i])) return false;
+        }
+        return true;
+    }
+
+
+
+
+
+    void makePrintString(QString &result) const;
+    void print() const;
+
+    inline int getSize() const
     {
         return size;
     }
 
-    real_type* getRealData()
+    bool isArray() const
     {
-        return (real_type*) data;
-    }
-
-    bool isArray() const{
         return v_isArray;
     }
 
-    bool setElement(const MyVariant& element, int n)
-    {
-        if (!v_isArray || n>=size || n<0) {
-            return false;
-        }
-        if (element.dataType != dataType)
-        {
-            *elements[n] = element.castTo(dataType);
-            return true;
-        }
-        *elements[n] = element;
-        return true;
+    inline void setSize(int s) {
+        size = s;
     }
 
-    MyVariant getElement(int n) const
+    inline void setIsArray(bool arg)
     {
-        return *elements.at(n);
+            size=0;
+            v_isArray = arg;
     }
 
-    void reset()
+    bool setElement(const MyVariant& element, int n);
+
+    MyVariant*& getElement(int n);
+
+    void reset();
+
+    void addElement(MyVariant* elementPtr)
     {
-        dataType = VOID;
-        if (data!=nullptr) {
-            delete data;
-            data = nullptr;
-        }
-        size = -1;
-        v_isArray = false;
-        elements.clear();
+        elements[size++] = elementPtr;
+    }
+
+    void setDataType(DataType m_dataType)
+    {
+        dataType = m_dataType;
     }
 
 };
@@ -631,9 +392,11 @@ private:
 public:
     MyCache() : iterator(-1) {}
 
-    void push(const MyVariant &toPush)
+    bool push(const MyVariant &toPush)
     {
+        if (iterator==1023) return false;
         cache[++iterator] = toPush;
+        return true;
     }
 
     MyVariant& last()
@@ -641,9 +404,18 @@ public:
         return cache[iterator];
     }
 
-    void removeLast()
+    bool removeLast()
     {
+        if (iterator<0) return false;
         cache[iterator--].reset();
+        return true;
+    }
+
+    bool allocate(MyVariant* &ptr)
+    {
+        if (iterator==1023) return false;
+        ptr = &cache[++iterator];
+        return true;
     }
 };
 #endif // MYVARIANT_H

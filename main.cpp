@@ -8,9 +8,8 @@
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
-    Interpreter interpreter;
-    interpreter.run();
+    Interpreter* interpreter = new Interpreter();
+    interpreter->run();
     return 0;
 }
 
