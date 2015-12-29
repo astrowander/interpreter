@@ -165,6 +165,7 @@ public:
 
     void createLeftChild(AbstractExpr* newNode)
     {
+       newNode->parent = currentNode;
        currentNode->left = newNode;
     }
 
@@ -227,6 +228,7 @@ public:
     {
         currentNode = root;
     }
+
 };
 
 

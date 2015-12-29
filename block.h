@@ -181,6 +181,8 @@ public:
 
     void run(MyVariant* result = nullptr, QList<MyVariant*> *parameters = nullptr)
     {
+        if (resultPtr!=nullptr)
+            resultPtr->reset();
         if (parameters != nullptr)
         {
             if (parameters->size()!=incomingParameters.size())

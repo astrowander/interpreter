@@ -103,46 +103,139 @@ public:
         v1->dataType = v2->dataType = TYPEERROR;
     }
 
-    //friend void isEqual(MyVariant& result, const MyVariant& v1, const MyVariant& v2);
+    friend bool isEqual(MyVariant* result, MyVariant* v1, MyVariant* v2)
+    {
+        autoCast(v1,v2);
+        result->dataType = INTEGER;
+        result->v_isArray = false;
+        if (!v1->v_isArray && !v2->v_isArray) {
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->intData = v1->realData == v2->realData;
+                break;
+            case INTEGER:
+                result->intData = v1->intData == v2->intData;
+                break;
+            default:
+                result->dataType = TYPEERROR;
+            }
+            return true;
+        }
 
-    friend MyVariant operator== (const MyVariant& m_v1, const MyVariant& m_v2);
+        if (v1->v_isArray && v2->v_isArray) {
+            if (v1->size!=v2->size) {
+                reportError("Dimensions of array does not match");
+                return false;
+            }
+            bool isAllTrue = true;
+            for (int i=0; i< v1->getSize(); ++i) {
+                if (!isEqual(result->elements[i], v1->elements[i], v2->elements[i])) return false;
+                isAllTrue&= result->elements[i]->intData;
+            }
+            result->intData = int(isAllTrue);
+            return true;
+        }
+        return false;
+    }
 
-    friend MyVariant operator< (const MyVariant& m_v1, const MyVariant& m_v2);
+    friend bool isLess(MyVariant* result, MyVariant* v1, MyVariant* v2)
+    {
+        autoCast(v1,v2);
+        result->dataType = INTEGER;
+        result->v_isArray = false;
+        if (!v1->v_isArray && !v2->v_isArray) {
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->intData = v1->realData < v2->realData;
+                break;
+            case INTEGER:
+                result->intData = v1->intData < v2->intData;
+                break;
+            default:
+                result->dataType = TYPEERROR;
+            }
+            return true;
+        }
+        reportError("Arrays could not be compared, except operators '==' and '!=' ");
+        return false;
+    }
 
-    friend MyVariant operator> (const MyVariant& m_v1, const MyVariant& m_v2);
+    friend bool isMore(MyVariant* result, MyVariant* v1, MyVariant* v2)
+    {
+       if (!isLess(result, v2,v1)) return false;
+       return true;
+    }
 
-    friend MyVariant operator<= (const MyVariant& m_v1, const MyVariant& m_v2);
+    friend bool isLessEqual(MyVariant* result, MyVariant*v1, MyVariant* v2)
+    {
+        if (!isMore(result, v1, v2)) return false;
+        result->intData = !result->intData;
+        return true;
+    }
 
-    friend MyVariant operator >= (const MyVariant& m_v1, const MyVariant& m_v2);
+    friend bool isMoreEqual(MyVariant* result, MyVariant*v1, MyVariant* v2)
+    {
+        if (!isLessEqual(result, v2,v1)) return false;
+        return true;
+    }
 
-    friend MyVariant operator !(const MyVariant& m_v1);
+    friend bool isNotEqual(MyVariant* result, MyVariant*v1, MyVariant* v2)
+    {
+        if (!isEqual(result,v1, v2)) return false;
+        result->intData = !result->intData;
+        return true;
+    }
 
-    friend MyVariant operator!= (const MyVariant& m_v1, const MyVariant& m_v2);
+    friend bool doAnd(MyVariant* result, MyVariant*v1, MyVariant* v2)
+    {
+        if (v1->v_isArray or v2->v_isArray or v1->dataType!=INTEGER or v2->dataType!=INTEGER) {
+            reportError("Logical operations could be applied only for integer numbers (not arrays)");
+            return false;
+        }
+        result->v_isArray = false;
+        result->size = -1;
+        result->dataType = INTEGER;
+        result->intData = v1->intData && v2->intData;
+        return true;
+    }
 
-    friend MyVariant operator &&(const MyVariant& m_v1, const MyVariant& m_v2);
+    friend bool doOr(MyVariant* result, MyVariant*v1, MyVariant* v2)
+    {
+        if (v1->v_isArray or v2->v_isArray or v1->dataType!=INTEGER or v2->dataType!=INTEGER) {
+            reportError("Logical operations could be applied only for integer numbers (not arrays)");
+            return false;
+        }
+        result->v_isArray = false;
+        result->size = -1;
+        result->dataType = INTEGER;
+        result->intData = v1->intData || v2->intData;
+        return true;
+    }
 
-    friend MyVariant operator ||(const MyVariant& m_v1, const MyVariant& m_v2);
+    friend bool doXor(MyVariant* result, MyVariant*v1, MyVariant* v2)
+    {
+        if (v1->v_isArray or v2->v_isArray or v1->dataType!=INTEGER or v2->dataType!=INTEGER) {
+            reportError("Logical operations could be applied only for integer numbers (not arrays)");
+            return false;
+        }
+        *result = MyVariant(int(!v1->intData != !v2->intData));
+        return true;
+    }
 
-    //XOR
-    friend MyVariant doXor(const MyVariant& m_v1, const MyVariant& m_v2);
-
-   // friend MyVariant& operator+(MyVariant& v1,  MyVariant& v2);
-
-    friend MyVariant operator-(const MyVariant& m_v1);
-
-    friend MyVariant operator-(const MyVariant& m_v1, const MyVariant& m_v2);
-
-    friend MyVariant operator*(const MyVariant& m_v1, const MyVariant& m_v2);
-
-    friend MyVariant operator/(const MyVariant& m_v1, const MyVariant& m_v2);
-
-    friend MyVariant operator^(const MyVariant& m_v1, const MyVariant& m_v2);
-
-    //friend MyVariant mySqrt(const MyVariant& v1);
-
-    friend MyVariant myLog(const MyVariant&v1);
-
-    friend MyVariant myAbs(const MyVariant&v1);
+    friend bool doNot(MyVariant* result, MyVariant*v1)
+    {
+        if (v1->v_isArray or v1->dataType!=INTEGER ) {
+            reportError("Logical operations could be applied only to integer numbers (not arrays)");
+            return false;
+        }
+        result->v_isArray = false;
+        result->size = -1;
+        result->dataType = INTEGER;
+        result->intData = !v1->intData;
+        return true;
+    }
 
     friend bool add(MyVariant* result, MyVariant* v1, MyVariant* v2)
     {
@@ -171,7 +264,7 @@ public:
                 reportError("Dimensions of array does not match");
                 return false;
             }
-            for (int i=0; i< std::min(v1->size, v2->size); ++i) {
+            for (int i=0; i<  i< v1->getSize(); ++i) {
                 if (!add(result->elements[i], v1->elements[i], v2->elements[i])) return false;
             }
             return true;
@@ -205,12 +298,37 @@ public:
                 reportError("Dimensions of array does not match");
                 return false;
             }
-            for (int i=0; i< std::min(v1->size, v2->size); ++i) {
+            for (int i=0; i< v1->getSize(); ++i) {
                 if (!substract(result->elements[i], v1->elements[i], v2->elements[i])) return false;
             }
             return true;
         }
         return false;
+    }
+
+    friend bool unaryMinus(MyVariant* result, MyVariant* v1)
+    {
+        result->dataType = v1->dataType;
+        if (!v1->v_isArray) {
+            result->v_isArray = false;
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->realData = -v1->realData;
+                break;
+            case INTEGER:
+                result->intData = -v1->intData;
+                break;
+            default:
+                result->dataType = TYPEERROR;
+            }
+            return true;
+        }
+        //else
+        result->v_isArray = true;
+        for (int i=0; i< v1->getSize(); ++i) {
+            if (!unaryMinus(result->elements[i], v1->elements[i])) return false;
+        }
     }
 
     friend bool multiply(MyVariant* result, MyVariant* v1, MyVariant* v2)
@@ -339,9 +457,65 @@ public:
         return true;
     }
 
+    friend bool myLog(MyVariant* result, MyVariant* v1)
+    {
+        result->dataType = v1->dataType;
+        if (!v1->isArray()) {
+            result->v_isArray = false;
 
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->realData = log(v1->realData);
+                break;
+            case INTEGER:
+                result->intData = log(v1->intData);
+                break;
+            default:
+                result->dataType = TYPEERROR;
+                reportError("Type mysmatch");
+                return false;
+            }
+            return true;
+        }
+        //else
+        result->v_isArray = true;
 
+        for (int i=0; i<v1->size; ++i) {
+            if (!myLog(result->elements[i], v1->elements[i])) return false;
+        }
+        return true;
+    }
 
+    friend bool myAbs(MyVariant* result, MyVariant* v1)
+    {
+        result->dataType = v1->dataType;
+        if (!v1->isArray()) {
+            result->v_isArray = false;
+
+            switch (v1->dataType)
+            {
+            case REAL:
+                result->realData = fabs(v1->realData);
+                break;
+            case INTEGER:
+                result->intData = abs(v1->intData);
+                break;
+            default:
+                result->dataType = TYPEERROR;
+                reportError("Type mysmatch");
+                return false;
+            }
+            return true;
+        }
+        //else
+        result->v_isArray = true;
+
+        for (int i=0; i<v1->size; ++i) {
+            if (!myAbs(result->elements[i], v1->elements[i])) return false;
+        }
+        return true;
+    }
 
     void makePrintString(QString &result) const;
     void print() const;
@@ -366,9 +540,15 @@ public:
             v_isArray = arg;
     }
 
-    bool setElement(const MyVariant& element, int n);
+    MyVariant*& getElement(int n)
+    {
+        return elements[n];
+    }
 
-    MyVariant*& getElement(int n);
+    void setElement(MyVariant* elementPtr, int index)
+    {
+        elements[index] = elementPtr;
+    }
 
     void reset();
 
@@ -380,6 +560,16 @@ public:
     void setDataType(DataType m_dataType)
     {
         dataType = m_dataType;
+    }
+
+    void setData(int data)
+    {
+        intData = data;
+    }
+
+    void setData(real_type data)
+    {
+        realData = data;
     }
 
 };

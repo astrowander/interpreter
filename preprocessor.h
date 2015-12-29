@@ -8,6 +8,7 @@ class Preprocessor
 {
 private:
     QString currentString;
+    const QString workdir = "/home/astrowander/libs/";
 public:
     Preprocessor(const QString& ss = "") : currentString(ss) {}
 
@@ -26,7 +27,7 @@ public:
             }
 
             QString filename = tempList.join(' ');
-            QFile importFile(filename);
+            QFile importFile(workdir+filename);
             if (!importFile.open(QIODevice::ReadOnly)) {
                 reportError("Unable to open file");
                 return QList<QString>();

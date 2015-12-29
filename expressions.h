@@ -55,20 +55,21 @@ public:
     }
 };
 
+
+
 class ArrayElement: public AbstractExpr
 {
 
 public:
     ArrayElement(MyVariant* m_value) : AbstractExpr(m_value) {}
 
-   /* int getIndex()
+    int getIndex()
     {
-        if (!right->eval()) return false;
-        MyVariant temp( right->value) ;
-        if (temp.getDataType()==INTEGER && !temp.isArray())
+
+        if (right->value->getDataType()==INTEGER && !right->value->isArray())
         {
-            int result = temp.toInt();
-            if (result>=0 && result < value->getSize())
+            int result = right->value->toInt();
+            if (result>=0 && result < left->value->getSize())
                 return result;
             else {
                 reportError("Bad index");
@@ -77,26 +78,28 @@ public:
         }
         reportError("Index must be an integer number");
         return -1;
-    }*/
+    }
 
     bool assign(MyVariant *rvalue) {
-       /* if (rvalue->getDataType()!=value->getDataType() ) {
+        if (rvalue->getDataType()!=left->value->getDataType() ) {
             reportError("Array element could be assigned same type");
             return false;
         }
 
-        if (!value->isArray()) {
+        if (!left->value->isArray()) {
             reportError("It isn't' array");
             return false;
         }
         int index = getIndex();
-        value->setElement(rvalue, index);
-        return true;*/
+        left->value->setElement(rvalue, index);
+        return true;
     }
 
     bool eval()
     {
-       /* if (!value->isArray()) {
+        if (!left->eval()) return false;
+        if (!right->eval()) return false;
+        if (!left->value->isArray()) {
             reportError("It isn't' array");
         }
 
@@ -104,17 +107,18 @@ public:
 
         if (index!=-1)
         {
-            value = MyVariant(value->getElement(index));
+            value = left->value->getElement(index);
+            return true;
         }
         else
-            return;*/
+            return false;
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
     {
-        /*
+
         ArrayElement* cloned = new ArrayElement(value);
-        CLONE*/
+        CLONE
     }
 };
 
@@ -152,26 +156,53 @@ public:
         return false;
     }
 
-    void allocateArray(MyVariant* toAlloc, MyVariant* m_v1)
+    bool allocateArray(MyVariant* toAlloc, MyVariant* m_v1)
     {
         int mysize = toAlloc->getSize(), v1size = m_v1->getSize();
         if (mysize == v1size && mysize == -1)
-            return;
+            return true;
 
         if (mysize<v1size) {
             if (mysize==-1) ++mysize;//Костыль. Исправить.
             int dif = v1size - mysize;
             for (int i=0; i<dif; ++i)
             {
-                stack->allocate( toAlloc->getElement(i + mysize) );
+                if (!stack->allocate( toAlloc->getElement(i + mysize) )) return false;
             }
             toAlloc->setSize(mysize+dif);
         }
 
         for (int i=0; i<v1size; ++i)
         {
-            allocateArray(toAlloc->getElement(i), m_v1->getElement(i));
+            if (!allocateArray(toAlloc->getElement(i), m_v1->getElement(i))) return false;
         }
+        return true;
+    }
+};
+
+class SizeOp: public Op
+{
+public:
+    SizeOp(MyVariant* m_value, MyCache* m_stack) : Op(m_value, m_stack) {}
+
+    bool eval()
+    {
+        if (!right->eval()) return false;
+        value->setDataType(INTEGER);
+        value->setSize(-1);
+        value->setIsArray(false);
+        if (!right->value->isArray()) {
+            value->setData(0);
+            return true;
+        }
+        value->setData(right->value->getSize());
+        return true;
+    }
+
+    AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
+    {
+        SizeOp* cloned = new SizeOp(value, stack);
+        CLONE
     }
 };
 
@@ -365,7 +396,9 @@ public:
 
     bool eval() {
         if (!right->eval()) return false;
-        *value = -*(right->value);
+        if (right->value->isArray())
+            if (!allocateArray(value, right->value)) return false;
+        unaryMinus(value, right->value);
         return true;
     }
     AbstractExpr* clone(AbstractExpr *m_parent) const override
@@ -383,7 +416,8 @@ public:
         if (!left->eval()) return false;
         if (!right->eval()) return false;
         //fitValueSize(std::min(left->value->getSize(), right->value->getSize()));
-        if (left->value->isArray()) allocateArray(value, left->value);
+        if (left->value->isArray())
+            if (!allocateArray(value, left->value)) return false;
         if (!add(value, left->value, right->value)) return false;
         return true;
     }
@@ -402,7 +436,8 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        if (left->value->isArray()) allocateArray(value, left->value);
+        if (left->value->isArray())
+            if (!allocateArray(value, left->value)) return false;
         if (!substract(value, left->value, right->value)) return false;
         return true;
     }
@@ -421,8 +456,10 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        if (left->value->isArray()) allocateArray(value, left->value);
-        if (right->value->isArray()) allocateArray(value, right->value);
+        if (left->value->isArray())
+            if (!allocateArray(value, left->value)) return false;
+        if (right->value->isArray())
+            if (!allocateArray(value, right->value)) return false;
         if (!multiply(value, left->value, right->value)) return false;
         return true;
     }
@@ -441,7 +478,8 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        if (left->value->isArray()) allocateArray(value, left->value);
+        if (left->value->isArray())
+            if (!allocateArray(value, left->value)) return false;
         if (!divide(value, left->value, right->value)) return false;
         return true;
     }
@@ -477,7 +515,8 @@ public:
     SqrtOp(MyVariant* m_value, MyCache* m_stack) : Op(m_value, m_stack) {}
     bool eval() {
         if (!right->eval()) return false;
-        if (right->value->isArray()) allocateArray(value, right->value);
+        if (right->value->isArray())
+            if (!allocateArray(value, right->value)) return false;
         if (!mySqrt(value,right->value)) return false;
         return true;
     }
@@ -495,7 +534,9 @@ public:
     LogOp(MyVariant* m_value, MyCache* m_stack) : Op(m_value, m_stack) {}
     bool eval() {
         if (!right->eval()) return false;
-        *value = myLog(*right->value);
+        if (right->value->isArray())
+            if (!allocateArray(value, right->value)) return false;
+        if (!myLog(value,right->value)) return false;
         return true;
     }
 
@@ -512,7 +553,9 @@ public:
     AbsOp(MyVariant* m_value, MyCache* m_stack) : Op(m_value, m_stack) {}
     bool eval() {
         if (!right->eval()) return false;
-        *value = myAbs(*right->value);
+        if (right->value->isArray())
+            if (!allocateArray(value, right->value)) return false;
+        if (!myAbs(value,right->value)) return false;
         return true;
     }
 
@@ -560,7 +603,9 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        *value = *left->value == *right->value;
+        if (left->value->isArray())
+            if (!allocateArray(value, left->value)) return false;
+        if (!isEqual(value, left->value, right->value)) return false;
         return true;
     }
 
@@ -578,7 +623,7 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        *value = *left->value < *right->value;
+        if (!isLess(value, left->value, right->value)) return false;
         return true;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -596,7 +641,7 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        *value = *left->value <= *right->value;
+        if (!isLessEqual(value, left->value, right->value)) return false;
         return true;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -613,7 +658,7 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        *value = *left->value > *right->value;
+        if (!isMore(value, left->value, right->value)) return false;
         return true;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -630,7 +675,7 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        *value = *left->value >= *right->value;
+        if (!isMoreEqual(value, left->value, right->value)) return false;
         return true;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -647,7 +692,7 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        *value = *left->value != *right->value;
+        if (!isNotEqual(value, left->value, right->value)) return false;
         return true;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -664,7 +709,7 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        *value = *left->value && *right->value;
+        if (!doAnd(value, left->value, right->value)) return false;
         return true;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -681,7 +726,7 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        *value = *left->value || *right->value;
+        if (!doOr(value, left->value, right->value)) return false;
         return true;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -698,7 +743,7 @@ public:
     bool eval() {
         if (!left->eval()) return false;
         if (!right->eval()) return false;
-        *value = doXor(*left->value, *right->value);
+        if (!doXor(value, left->value, right->value)) return false;
         return true;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -714,7 +759,7 @@ public:
     BoolNotOp(MyVariant* m_value, MyCache* m_stack) : Op(m_value, m_stack) {}
     bool eval() {
         if (!right->eval()) return false;
-        *value = !*right->value;
+        if (!doNot(value, right->value)) return false;
         return true;
     }
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override

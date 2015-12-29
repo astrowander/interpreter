@@ -570,7 +570,11 @@ bool Parser::ident()
             stack->push(MyVariant());
             currentStatement->createRightChild(new LogOp(&stack->last(), stack));
             break;
-        case 2: //sqrt
+        case 2: //size
+            stack->push(MyVariant());
+            currentStatement->createRightChild(new SizeOp(&stack->last(), stack));
+            break;
+        case 3: //sqrt
             stack->push(MyVariant());
             currentStatement->createRightChild(new SqrtOp(&stack->last(), stack));
             break;
@@ -579,6 +583,7 @@ bool Parser::ident()
         if(!sp.match('(')) return false;
         if (!assign()) return false;
         if(!sp.match(')')) return false;
+        currentStatement->goUp();
         return true;
     }
 
@@ -618,8 +623,9 @@ bool Parser::ident()
             }
 
             sp.match('[');
-            currentStatement->createRightChild(new ArrayElement(seeingBlock->getVariableByName(name)));
-
+            stack->push(MyVariant());
+            currentStatement->createRightChild(new ArrayElement(&stack->last()));
+            currentStatement->createLeftChild(new Variable(seeingBlock->getVariableByName(name)));
             if (!assign()) return false;
             currentStatement->goUp();
             sp.skipSpaces();

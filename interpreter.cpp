@@ -15,7 +15,10 @@ void Interpreter::run()
         else if (code==2)
             break;
 
-        if (!parser->parse(toParseList)) continue;
+        if (!parser->parse(toParseList)) {
+            std::cout << "error in line '" << toParseList.join(' ').toStdString() << "'" << std::endl;
+            continue;
+        }
 
         if (parser->getActiveBlock()==&mainBlock) {
 
@@ -27,7 +30,10 @@ void Interpreter::run()
             QTime timer;
             timer.start();
 
-            if (!mainBlock.runLast(&result)) continue;
+            if (!mainBlock.runLast(&result)) {
+                std::cout << "error in line" << toParseList.join(' ').toStdString() << std::endl;
+                continue;
+            }
             if(parser->doOutput())
                result.print();
             std::cout << "Time elapsed: " << timer.elapsed() << std::endl;
