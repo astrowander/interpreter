@@ -10,7 +10,7 @@
 class Interpreter
 {
 private:
-    Block mainBlock;
+    Block* mainBlock;
 
     Scanner scanner;
     Parser* parser;
@@ -25,7 +25,8 @@ public:
 
     Interpreter() : inStream(stdin)
     {
-       parser = new Parser(&mainBlock, this, &Interpreter::getStringList, &Interpreter::addToBuffer, &myVariantStack);
+       mainBlock = new Block(&myVariantStack);
+       parser = new Parser(mainBlock, this, &Interpreter::getStringList, &Interpreter::addToBuffer, &myVariantStack);
     }
 
     ~Interpreter()

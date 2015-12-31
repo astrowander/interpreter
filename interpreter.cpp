@@ -20,17 +20,17 @@ void Interpreter::run()
             continue;
         }
 
-        if (parser->getActiveBlock()==&mainBlock) {
+        if (parser->getActiveBlock()==mainBlock) {
 
-            if (nOfStatements==mainBlock.howManyStatements()) {
+            if (nOfStatements==mainBlock->howManyStatements()) {
                 continue;
             }
-            nOfStatements = mainBlock.howManyStatements();
+            nOfStatements = mainBlock->howManyStatements();
 
             QTime timer;
             timer.start();
 
-            if (!mainBlock.runLast(&result)) {
+            if (!mainBlock->runLast(&result)) {
                 std::cout << "error in line" << toParseList.join(' ').toStdString() << std::endl;
                 continue;
             }

@@ -19,25 +19,27 @@ private:
 
     QList<QString> incomingParameters;
     //QMap <int, Block*> childBlocksMap;
-    Block* childBlocksMap[1024];
+    Block* childBlocksMap[1024];    
     QMap <QString, Block*> functionsMap;
-    QMap <QString, MyVariant> variablesMap;
+    QMap <QString, MyVariant*> variablesMap;
     MyVariant* resultPtr;
 
+    MyCache* stack;
+
 public:
-    Block() : parent(nullptr)
+    Block(MyCache* m_stack = nullptr) : parent(nullptr), stack(m_stack)
     {
         init();
     }
 
-    Block(Block* m_parent) : parent (m_parent)
+    Block(Block* m_parent, MyCache* m_stack = nullptr) : parent (m_parent), stack(m_stack)
     {
         m_id = number++;
         nStatements=0;
         resultPtr = nullptr;
     }
 
-    Block(Block* m_parent, const QList<QString>& parameters)  : parent(m_parent)
+    Block(Block* m_parent, const QList<QString>& parameters, MyCache* m_stack = nullptr)  : parent(m_parent), stack(m_stack)
     {
         init();
         foreach (QString name, parameters) {
@@ -49,8 +51,11 @@ public:
     void init()
     {
         m_id = number++;
-        variablesMap.insert("result", MyVariant(int(0)));
-        resultPtr = &variablesMap["result"];
+        MyVariant* temp;
+        stack->allocate(temp);
+        *temp = MyVariant(int(0));
+        variablesMap.insert("result", temp);
+        resultPtr = variablesMap["result"];
         nStatements=0;
     }
 
@@ -99,19 +104,19 @@ public:
 
     MyVariant* getVariableByName(const QString& ss)
     {
-       return &variablesMap[ss];
+       return variablesMap[ss];
     }
 
     void addFunction(const QString& name, const QList<QString>& parameters)
     {
-        functionsMap.insert(name, new Block(this,parameters));
+        functionsMap.insert(name, new Block(this,parameters, stack));
     }
 
     int addChildBlock()
     {
         //childBlocksMap.insert(number-1, new Block(this));
         //return number - 1;
-        childBlocksMap[number-1] = new Block(this);
+        childBlocksMap[number-1] = new Block(this, stack);
         return number - 1;
     }
 
@@ -139,19 +144,24 @@ public:
 
     void addVariable(const QString& ss, DataType dataType = REAL, int m_size = -1, real_type data = 0)
     {
+        MyVariant* temp;
+        stack->allocate(temp);
         switch (dataType)
         {
         case REAL:
-            variablesMap.insert(ss, MyVariant(data));
+            *temp = MyVariant(data);
             break;
 
         case INTEGER:
-            variablesMap.insert(ss, MyVariant(int(data)));
+            *temp = MyVariant(int(data));
             break;
 
         default:
-            variablesMap.insert(ss, MyVariant(VOID));
+            *temp = MyVariant(VOID);
+
         }
+
+        variablesMap.insert(ss, temp);
     }
 
     void addIncomingParameter(const QString& ss)
@@ -159,9 +169,9 @@ public:
         incomingParameters.append(ss);
     }
 
-    void setVariable(const QString& name, const MyVariant& result) {
-        variablesMap[name]=result;
-        std::cout << name.toStdString() << " = " << result.toRealType() << std::endl;
+    void setVariable(const QString& name, MyVariant* result) {
+        *variablesMap[name] = *result;
+        std::cout << name.toStdString() << " = " << result->toRealType() << std::endl;
     }
 
     void deleteVariable(const QString& ss) {
@@ -194,7 +204,7 @@ public:
 
             for(int i=0; i<parameters->size(); ++i)
             {
-                variablesMap[incomingParameters[i]] = *(*parameters).at(i);
+                *variablesMap[incomingParameters[i]] = *parameters->at(i);
             }
         }
 

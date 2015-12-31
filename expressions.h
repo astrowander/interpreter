@@ -28,7 +28,7 @@ public:
         parent = left = right = nullptr;
     }
     virtual ~AbstractExpr() {}
-    inline virtual bool eval() = 0;
+    virtual bool eval() = 0;
     virtual bool assign(MyVariant* rvalue) = 0;
     virtual AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const = 0;   
 };
