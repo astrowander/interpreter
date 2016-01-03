@@ -30,11 +30,11 @@ void Interpreter::run()
             QTime timer;
             timer.start();
 
-            if (!mainBlock->runLast(&result)) {
-                std::cout << "error in line" << toParseList.join(' ').toStdString() << std::endl;
+            if (mainBlock->runLast(&result) > 900) {
+                std::cout << "error in line '" << toParseList.join(' ').toStdString() << "'" << std::endl;
                 continue;
             }
-            if(parser->doOutput())
+            if(parser->doOutput() && result.getDataType()!=VOID)
                result.print();
             std::cout << "Time elapsed: " << timer.elapsed() << std::endl;
         }

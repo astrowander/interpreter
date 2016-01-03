@@ -6,21 +6,38 @@ bool Parser::parse(QStringList list)
 
     switch (keywords.indexOf(list[0]))
     {
-    case 0: //display
+    case 0: //break
+        list.removeAt(0);
+        sp.setString(list.join(' '));
+        stack->push(MyVariant());
+        currentStatement->createRightChild(new BreakOp(&stack->last(), stack));
+        if (!assign()) return false;
+        activeBlock->addStatement(currentStatement);
+        delete currentStatement;
+        return true;
+
+    case 1: //display
         list.removeAt(0);
         sp.setString(list.join(' '));
 
         while (!sp.endOfString()) {
             QString name = sp.getWord();
-            if (activeBlock->isVariableDeclared(name)) {
-                currentStatement->createNodeAbove(new DisplayVariable(activeBlock->getVariableByName(name), stack));
-                continue;
+            Block* seeingBlock = activeBlock;
+            while (seeingBlock!=nullptr)
+            {
+                if (seeingBlock->isVariableDeclared(name)) {
+                    currentStatement->createNodeAbove(new DisplayVariable(seeingBlock->getVariableByName(name), stack));
+                    break;
+                }
+                seeingBlock = seeingBlock->getParent();
             }
-            std::cout << name.toStdString() << std::endl;
+            //std::cout << name.toStdString() << std::endl;
         }
-        break;
+        activeBlock->addStatement(currentStatement);
+        delete currentStatement;
+        return true;
 
-    case 1: //function
+    case 2: //function
     {
         list.removeAt(0);
         sp.setString(list.join(' '));
@@ -75,7 +92,7 @@ bool Parser::parse(QStringList list)
         break;
     }
     // if
-    case 2:
+    case 3:
     {
         list.removeAt(0);
         sp.setString(list.join(' '));
@@ -142,7 +159,7 @@ bool Parser::parse(QStringList list)
         break;
     }
 
-    case 3: //loop
+    case 4: //loop
     {
         list.removeAt(0);
         sp.setString(list.join(' '));
@@ -177,7 +194,7 @@ bool Parser::parse(QStringList list)
         return true;
     }
 
-    case 4: //var
+    case 5: //var
     {
         list.removeAt(0);
         sp.setString(list.join(' '));
@@ -192,7 +209,7 @@ bool Parser::parse(QStringList list)
         break;
     }
     //while
-    case 5:
+    case 6:
     {
         list.removeAt(0);
         sp.setString(list.join(' '));
@@ -227,7 +244,7 @@ bool Parser::parse(QStringList list)
         return true;
     }
 
-    case 6: //end
+    case 7: //end
 
         if (activeBlock->getParent()==nullptr) {
             reportError("'end' token is unallowed here");

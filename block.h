@@ -178,18 +178,18 @@ public:
         variablesMap.remove(ss);
     }
 
-    void runChildBlock(int id)
+    int runChildBlock(int id)
     {
-        if (id==-1) return;
+        if (id==-1) return 1000;
 
        /* if (!childBlocksMap.contains(id)) {
             reportError("Bad pointer");
             return;
         }*/
-        childBlocksMap[id]->run();
+        return childBlocksMap[id]->run();
     }
 
-    void run(MyVariant* result = nullptr, QList<MyVariant*> *parameters = nullptr)
+    int run(MyVariant* result = nullptr, QList<MyVariant*> *parameters = nullptr)
     {
         if (resultPtr!=nullptr)
             resultPtr->reset();
@@ -199,7 +199,7 @@ public:
             {
                 reportError("Invalid number of parameters");
                 *result = MyVariant();
-                return;
+                return 1000;
             }
 
             for(int i=0; i<parameters->size(); ++i)
@@ -210,19 +210,22 @@ public:
 
         for (int i=0; i<nStatements; ++i)
         {
-            statements[i]->eval();
+            int n = statements[i]->eval();
+            if (n) return n;
         }
 
         if (resultPtr!=nullptr)
             *result = *resultPtr;
+
+        return 0;
     }
 
-    bool runLast(MyVariant* result)
+    int runLast(MyVariant* result)
     {
         if (nStatements!=0)
           return statements[nStatements-1]->eval(result);
 
-        return false;
+        return 1000;
     }
 
     friend int getLevel(Block* block);

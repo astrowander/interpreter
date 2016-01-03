@@ -21,7 +21,7 @@ private:
     PointerToAddBuffer pToAddBuf;
     bool outputResult;
 
-    const QVector<QString> keywords = {"display", "function", "if", "loop", "var", "while", "end"};
+    const QVector<QString> keywords = {"break", "display", "function", "if", "loop", "var", "while", "end"};
     const QVector<QString> presetFunctions = {"abs", "log", "size", "sqrt"};
     MyCache *stack;
 

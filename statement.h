@@ -210,18 +210,19 @@ public:
         return currentNode;
     }
 
-    bool eval(MyVariant* result = nullptr) const {
+    int eval(MyVariant* result = nullptr) const {
         if (root!=nullptr)
         {
-            if (!root->eval()) {
-                return false;
+            int n = root->eval();
+            if (n) {
+                return n-1;
             }
             if (result!=nullptr)
                 *result = *root->value;
-            return true;
+            return 0;
         }
 
-        return false;
+        return 1000;
     }
 
     void setCurrentNodeToRoot()
