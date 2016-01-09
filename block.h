@@ -21,7 +21,7 @@ private:
     //QMap <int, Block*> childBlocksMap;
     Block* childBlocksMap[1024];    
     QMap <QString, Block*> functionsMap;
-    QMap <QString, MyVariant*> variablesMap;
+    QMap <QString, MyVariant* > variablesMap;
     MyVariant* resultPtr;
 
     MyCache* stack;
@@ -180,7 +180,7 @@ public:
 
     int runChildBlock(int id)
     {
-        if (id==-1) return 1000;
+        if (id==-1) return 0;
 
        /* if (!childBlocksMap.contains(id)) {
             reportError("Bad pointer");
@@ -211,11 +211,11 @@ public:
         for (int i=0; i<nStatements; ++i)
         {
             int n = statements[i]->eval();
-            if (n) return n;
+            if (resultPtr!=nullptr)
+                *result = *resultPtr;
+            if (n) return --n;
         }
 
-        if (resultPtr!=nullptr)
-            *result = *resultPtr;
 
         return 0;
     }

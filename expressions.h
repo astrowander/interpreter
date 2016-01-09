@@ -207,13 +207,12 @@ public:
 };
 
 
-
 class CallFunction : public Op
 {
 
 private:
     PointerToRun pToRun;
-    Block* parentBlock;
+    Block* parentBlock;    
 
 public:
     CallFunction(Block* m_parentBlock, PointerToRun m_pToRun, MyVariant* m_value, MyCache* m_stack) : parentBlock(m_parentBlock) , pToRun(m_pToRun), Op(m_value, m_stack) {}
@@ -225,8 +224,8 @@ public:
             if (expr->eval()) return 1000;
             parameters.append(expr->value);
         }
-
-        return (parentBlock->*pToRun)(value, &parameters);
+        int n = (parentBlock->*pToRun)(value, &parameters);
+        return n ? --n : n;
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -253,13 +252,15 @@ public:
     int eval()
     {
         if(left->eval()) return 1000;
+        int n;
         if (left->value->toInt())
         {
-            return (parentBlock->*pToRunChild)(ifTrueId);
+            n =  (parentBlock->*pToRunChild)(ifTrueId);
         }
         else {
-            return (parentBlock->*pToRunChild)(ifFalseId);
-        }        
+            n = (parentBlock->*pToRunChild)(ifFalseId);
+        }
+        return n ? --n : n;
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -284,8 +285,9 @@ public:
             if (left->eval()) return 1000;
             if (!left->value->toInt()) return 0;
             int n = (parentBlock->*pToRunChild)(ifTrueId);
-            if (n) return n;
+            if (n) return --n;
         }
+        return 0;
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -310,7 +312,7 @@ public:
         std::cout << count << std::endl;
         while (count--) {
             int n = (parentBlock->*pToRunChild)(ifTrueId);
-            if (n) return n;
+            if (n) return --n;
         }
         return 0;
     }
@@ -331,7 +333,7 @@ public:
     int eval()
     {
         if (right->eval()) return 1000;
-        return right->value->toInt() + 1;
+        return right->value->toInt() * 2;
     }
 
     AbstractExpr* clone(AbstractExpr* m_parent = nullptr) const override
@@ -473,7 +475,8 @@ public:
     MultiplyOp(MyVariant* m_value, MyCache* m_stack) : Op(m_value, m_stack) {}
     int eval() {
         if (left->eval()) return 1000;
-        if (right->eval()) return 1000;
+        int rightres = right->eval();
+        if (rightres) return 1000;
         if (left->value->isArray())
             if (!allocateArray(value, left->value)) return 1000;
         if (right->value->isArray())

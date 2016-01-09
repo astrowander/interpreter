@@ -611,6 +611,7 @@ bool Parser::ident()
 
             stack->push(MyVariant());
             Block* called = seeingBlock->getFunctionByName(name);
+            ++callID;
             CallFunction* callFunction = new CallFunction(called, &Block::run, &stack->last(), stack);
             currentStatement->createRightChild(callFunction);
 

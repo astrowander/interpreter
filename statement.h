@@ -213,13 +213,14 @@ public:
     int eval(MyVariant* result = nullptr) const {
         if (root!=nullptr)
         {
+            /*int n = root->eval();
+            if (n && --n) {
+                return n;
+            }*/
             int n = root->eval();
-            if (n) {
-                return n-1;
-            }
-            if (result!=nullptr)
+            if (result != nullptr)
                 *result = *root->value;
-            return 0;
+            return n;
         }
 
         return 1000;

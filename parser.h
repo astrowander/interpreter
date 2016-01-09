@@ -20,6 +20,7 @@ private:
     PointerToGetStringList pToGet;
     PointerToAddBuffer pToAddBuf;
     bool outputResult;
+    int callID;
 
     const QVector<QString> keywords = {"break", "display", "function", "if", "loop", "var", "while", "end"};
     const QVector<QString> presetFunctions = {"abs", "log", "size", "sqrt"};
@@ -45,7 +46,7 @@ private:
     bool boolTerm();
     bool notFactor();
 public:
-    Parser (Block *m_activeBlock, Interpreter* m_interpreter, PointerToGetStringList m_pToGet, PointerToAddBuffer m_pToAddBuf, MyCache *m_stack) : activeBlock(m_activeBlock), interpreter(m_interpreter), pToGet(m_pToGet) , pToAddBuf(m_pToAddBuf), stack(m_stack) {}
+    Parser (Block *m_activeBlock, Interpreter* m_interpreter, PointerToGetStringList m_pToGet, PointerToAddBuffer m_pToAddBuf, MyCache *m_stack) : activeBlock(m_activeBlock), interpreter(m_interpreter), pToGet(m_pToGet) , pToAddBuf(m_pToAddBuf), stack(m_stack), callID(0) {}
     Block* getActiveBlock()
     {
         return activeBlock;
